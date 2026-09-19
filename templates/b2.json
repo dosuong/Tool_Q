@@ -1,0 +1,18 @@
+{
+  "name": "b2",
+  "description": "",
+  "function_name": null,
+  "structural_rules": {
+    "required_constructs": [],
+    "forbidden_constructs": [],
+    "forbidden_imports": []
+  },
+  "test_cases": [
+    {
+      "input": "",
+      "expected_output": "1 2 3 4 5 6 7 8 9 \n",
+      "timeout": 5.0,
+      "note": "case 1"
+    }
+  ]
+}

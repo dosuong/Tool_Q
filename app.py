@@ -10,7 +10,7 @@ import streamlit as st
 from grader.exam_batch import group_by_bai
 from grader.models import TestCase
 from grader.pytest_plugin import GraderPlugin
-from grader.runner import run_capture_only
+from grader.runner import run_capture_only, run_function_capture_only
 from grader.templates_store import delete_template, list_templates, load_template, save_template
 
 st.set_page_config(
@@ -132,6 +132,20 @@ def _parallel_controls(key_prefix: str):
             icon=":material/bolt:",
         )
     return parallel, workers
+
+
+def _file_uploader_with_clear(label: str, key_prefix: str):
+    reset_key = f"{key_prefix}_reset"
+    st.session_state.setdefault(reset_key, 0)
+    uploader_key = f"{key_prefix}_{st.session_state[reset_key]}"
+    files = st.file_uploader(label, type=["py"], accept_multiple_files=True, key=uploader_key)
+    if files:
+        if st.button(
+            f"Xoá tất cả ({len(files)} file đã chọn)", icon=":material/close:", key=f"{key_prefix}_clear_btn",
+        ):
+            st.session_state[reset_key] += 1
+            st.rerun()
+    return files
 
 
 def _render_results(output_results, structure_results, key_prefix: str):
@@ -318,35 +332,99 @@ with tab_template:
         )
 
     with st.expander("Sinh đáp án tự động từ file lời giải mẫu (tuỳ chọn)", icon=":material/auto_awesome:"):
-        solution_file = st.file_uploader("Upload solution.py", type=["py"], key="solution_uploader")
-        sample_inputs_text = st.text_area(
-            "Danh sách input mẫu (mỗi input 1 khối, ngăn cách bằng dòng chỉ có ---)",
-            height=120, key="sample_inputs",
-        )
-        if st.button("Sinh đáp án từ lời giải mẫu", icon=":material/auto_awesome:"):
-            if not solution_file:
-                st.error("Hãy upload file solution.py trước.")
-            else:
-                with tempfile.TemporaryDirectory(prefix="solgen_") as tmp:
-                    sol_path = Path(tmp) / "solution.py"
-                    sol_path.write_bytes(solution_file.getbuffer())
-                    inputs = sample_inputs_text.split("\n---\n") if sample_inputs_text.strip() else [""]
-                    generated, has_error = [], False
-                    for idx, inp in enumerate(inputs, start=1):
-                        out, err, rc = run_capture_only(sol_path, inp, timeout=5.0)
-                        if rc != 0 or err.strip():
-                            err_line = err.strip().splitlines()[-1] if err.strip() else "lỗi không rõ"
-                            st.error(f"Input #{idx}: solution.py lỗi — {err_line}")
-                            has_error = True
-                        else:
-                            generated.append(
-                                {"input": inp, "expected_output": out, "timeout": 5, "note": f"case {idx}"}
+        if function_name_input:
+            gen_mode = st.radio(
+                "Kiểu sinh đáp án",
+                ["Chương trình (đọc input, in ra)", "Hàm (gọi trực tiếp)"],
+                horizontal=True, key="gen_mode",
+            )
+        else:
+            gen_mode = "Chương trình (đọc input, in ra)"
+            st.caption(
+                "Chỉ có chế độ chương trình — điền 'Tên hàm cho phép nộp dạng hàm' ở trên nếu muốn "
+                "sinh đáp án bằng cách gọi hàm trực tiếp."
+            )
+
+        solution_file = st.file_uploader("Upload file lời giải mẫu (.py)", type=["py"], key="solution_uploader")
+
+        if gen_mode.startswith("Chương trình"):
+            sample_inputs_text = st.text_area(
+                "Danh sách input mẫu (mỗi input 1 khối, ngăn cách bằng dòng chỉ có ---)",
+                height=120, key="sample_inputs",
+            )
+            if st.button("Sinh đáp án từ lời giải mẫu", icon=":material/auto_awesome:", key="gen_program_btn"):
+                if not solution_file:
+                    st.error("Hãy upload file lời giải mẫu (.py) trước.")
+                else:
+                    with tempfile.TemporaryDirectory(prefix="solgen_") as tmp:
+                        sol_path = Path(tmp) / "solution.py"
+                        sol_path.write_bytes(solution_file.getbuffer())
+                        inputs = sample_inputs_text.split("\n---\n") if sample_inputs_text.strip() else [""]
+                        generated, has_error = [], False
+                        for idx, inp in enumerate(inputs, start=1):
+                            out, err, rc = run_capture_only(sol_path, inp, timeout=5.0)
+                            if rc != 0 or err.strip():
+                                err_line = err.strip().splitlines()[-1] if err.strip() else "lỗi không rõ"
+                                st.error(f"Input #{idx}: lời giải mẫu lỗi — {err_line}")
+                                has_error = True
+                            else:
+                                generated.append(
+                                    {"input": inp, "expected_output": out, "timeout": 5, "note": f"case {idx}"}
+                                )
+                        if not has_error:
+                            st.session_state[tc_state_key] = generated
+                            st.session_state["editor_version"] += 1
+                            st.success(f"Đã sinh {len(generated)} đáp án — đã điền vào bảng test case bên dưới.")
+                            st.rerun()
+        else:
+            st.caption(
+                f"File lời giải mẫu cần định nghĩa đúng hàm tên **{function_name_input}**. "
+                "Mỗi khối là 1 bộ tham số gọi hàm (cú pháp JSON, vd `[3, 5]`), các khối ngăn cách bằng dòng "
+                "chỉ có `---` — giống hệt cách nhập của chế độ Chương trình."
+            )
+            sample_call_args_text = st.text_area(
+                "Danh sách call_args mẫu (mỗi khối 1 bộ tham số, ngăn cách bằng dòng chỉ có ---)",
+                height=120, key="sample_call_args", placeholder="[3, 5]\n---\n[10, -2]\n---\n[0, 0]",
+            )
+            if st.button(
+                "Sinh đáp án từ lời giải mẫu", icon=":material/auto_awesome:", key="gen_function_btn",
+            ):
+                if not solution_file:
+                    st.error("Hãy upload file lời giải mẫu (.py) trước.")
+                else:
+                    with tempfile.TemporaryDirectory(prefix="solgen_") as tmp:
+                        sol_path = Path(tmp) / "solution.py"
+                        sol_path.write_bytes(solution_file.getbuffer())
+                        blocks = (
+                            sample_call_args_text.split("\n---\n") if sample_call_args_text.strip() else []
+                        )
+                        generated, has_error = [], False
+                        for idx, block in enumerate(blocks, start=1):
+                            try:
+                                call_args = json.loads(block.strip())
+                            except json.JSONDecodeError:
+                                st.error(f"Khối #{idx}: '{block.strip()}' không phải JSON hợp lệ (vd cần dạng [3, 5]).")
+                                has_error = True
+                                continue
+                            ret_val, err = run_function_capture_only(
+                                sol_path, function_name_input, call_args, timeout=5.0,
                             )
-                    if not has_error:
-                        st.session_state[tc_state_key] = generated
-                        st.session_state["editor_version"] += 1
-                        st.success(f"Đã sinh {len(generated)} đáp án — đã điền vào bảng test case bên dưới.")
-                        st.rerun()
+                            if err:
+                                st.error(f"Dòng #{idx}: lỗi khi gọi hàm — {err}")
+                                has_error = True
+                            else:
+                                generated.append({
+                                    "input": "", "expected_output": "",
+                                    "call_args": call_args, "call_kwargs": {}, "expected_return": ret_val,
+                                    "timeout": 5, "note": f"case {idx}",
+                                })
+                        if not has_error and generated:
+                            st.session_state[tc_state_key] = generated
+                            st.session_state["editor_version"] += 1
+                            st.success(
+                                f"Đã sinh {len(generated)} đáp án dạng hàm — đã điền vào bảng test case bên dưới."
+                            )
+                            st.rerun()
 
     st.subheader("Test case", icon=":material/table_chart:", divider="gray")
     st.caption(
@@ -477,9 +555,7 @@ with tab_grade_one:
 
         parallel, workers = _parallel_controls("tab2")
 
-        uploaded_files = st.file_uploader(
-            "Upload bài làm học sinh (.py)", type=["py"], accept_multiple_files=True, key="tab2_uploader",
-        )
+        uploaded_files = _file_uploader_with_clear("Upload bài làm học sinh (.py)", "tab2_uploader")
         if st.button("Chấm bài", disabled=not uploaded_files, key="tab2_run", type="primary",
                      icon=":material/play_arrow:"):
             with tempfile.TemporaryDirectory(prefix="grader_run_") as tmp:
@@ -514,9 +590,8 @@ with tab_exam:
 
         parallel, workers = _parallel_controls("tab3")
 
-        uploaded_files = st.file_uploader(
-            "Upload toàn bộ bài làm học sinh (.py) — đặt tên theo quy ước <hoc_sinh>_bai<N>.py",
-            type=["py"], accept_multiple_files=True, key="tab3_uploader",
+        uploaded_files = _file_uploader_with_clear(
+            "Upload toàn bộ bài làm học sinh (.py) — đặt tên theo quy ước <hoc_sinh>_bai<N>.py", "tab3_uploader",
         )
 
         if st.button("Chấm toàn bộ", disabled=not (uploaded_files and mapping), key="tab3_run", type="primary",

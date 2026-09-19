@@ -44,6 +44,42 @@ def run_capture_only(solution_file: Path, input_text: str, timeout: float = 5.0)
     return proc.stdout, proc.stderr, proc.returncode
 
 
+def run_function_capture_only(solution_file: Path, function_name: str, call_args, call_kwargs=None, timeout: float = 5.0):
+    """Chạy solution.py ở chế độ hàm (dùng để sinh đáp án mẫu, không so sánh).
+
+    Trả về (gia_tri_tra_ve, thong_bao_loi) — gia_tri_tra_ve là None nếu có lỗi.
+    """
+    call_kwargs = call_kwargs or {}
+    try:
+        proc = _run_subprocess(
+            [
+                sys.executable, str(_WRAPPER_PATH), str(solution_file), function_name,
+                json.dumps(call_args), json.dumps(call_kwargs),
+            ],
+            None, timeout,
+        )
+    except subprocess.TimeoutExpired:
+        return None, f"Quá thời gian cho phép ({timeout}s)."
+
+    if proc.returncode != 0 or proc.stderr.strip():
+        _, _, err_msg = _parse_traceback(proc.stderr)
+        return None, err_msg or "Lỗi không rõ khi gọi hàm."
+
+    result_line = ""
+    for line in reversed(proc.stdout.splitlines()):
+        if line.startswith(RESULT_MARKER):
+            result_line = line[len(RESULT_MARKER):]
+            break
+
+    if not result_line:
+        return None, "Không nhận được kết quả trả về từ hàm."
+
+    try:
+        return json.loads(result_line), None
+    except json.JSONDecodeError:
+        return None, "Kết quả trả về không phải JSON hợp lệ."
+
+
 def _parse_traceback(stderr: str):
     stderr = stderr.strip()
     if not stderr:

@@ -208,15 +208,18 @@ st.html(
             padding: 0 !important;
             line-height: 1 !important;
         }
-        .st-key-delete_template_btn button span,
-        .st-key-tab2_uploader_clear_btn button span,
-        .st-key-tab3_uploader_clear_btn button span {
-            display: inline-flex !important;
-            justify-content: center !important;
-            align-items: center !important;
+        /* Loại bỏ khoảng cách (margin) thừa mặc định của icon Streamlit để nó nằm chính giữa */
+        .st-key-delete_template_btn button [data-testid="stIconMaterial"],
+        .st-key-tab2_uploader_clear_btn button [data-testid="stIconMaterial"],
+        .st-key-tab3_uploader_clear_btn button [data-testid="stIconMaterial"],
+        .st-key-delete_template_btn button span.material-symbols-rounded,
+        .st-key-tab2_uploader_clear_btn button span.material-symbols-rounded,
+        .st-key-tab3_uploader_clear_btn button span.material-symbols-rounded {
             margin: 0 !important;
             padding: 0 !important;
-            line-height: 1 !important;
+            display: flex !important;
+            justify-content: center !important;
+            align-items: center !important;
         }
         /* Căn nút ra giữa cột để cân đối với khung upload */
         .st-key-delete_template_btn,

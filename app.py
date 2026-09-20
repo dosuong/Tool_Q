@@ -83,77 +83,50 @@ st.html(
             text-decoration: none !important;
         }
         [data-testid="stPageLink"] a:hover {
-            background-color: #F3F4F6 !important;
-            color: #1F2937 !important;
+            background-color: #DBEAFE !important;
+            color: #2563EB !important;
         }
 
-        /* ====== NÚT XÓA (icon-only, đỏ nhạt) ====== */
+        /* ====== NÚT XÓA (mặc định đỏ nhạt, hover đỏ đậm) ====== */
         div.st-key-delete_template_btn button,
         div.st-key-delete_confirm_btn button,
         div.st-key-tab2_uploader_clear_btn button,
         div.st-key-tab3_uploader_clear_btn button {
-            border-radius: 8px !important;
+            background-color: #FEF2F2 !important;
+            border: 1px solid #FECACA !important;
             transition: all 0.2s ease !important;
-            width: 2.2rem !important;
-            height: 2.2rem !important;
-            min-width: 2.2rem !important;
-            max-width: 2.2rem !important;
-            padding: 0 !important;
-            display: flex !important;
-            justify-content: center !important;
-            align-items: center !important;
-        }
-        div.st-key-delete_template_btn button div,
-        div.st-key-delete_confirm_btn button div,
-        div.st-key-tab2_uploader_clear_btn button div,
-        div.st-key-tab3_uploader_clear_btn button div {
-            display: flex !important;
-            justify-content: center !important;
-            align-items: center !important;
-            gap: 0 !important;
-            padding: 0 !important;
-            margin: 0 !important;
-            width: 100% !important;
-            height: 100% !important;
         }
         div.st-key-delete_template_btn button p,
-        div.st-key-delete_confirm_btn button p,
-        div.st-key-tab2_uploader_clear_btn button p,
-        div.st-key-tab3_uploader_clear_btn button p {
-            display: none !important;
-        }
         div.st-key-delete_template_btn button span,
+        div.st-key-delete_confirm_btn button p,
         div.st-key-delete_confirm_btn button span,
+        div.st-key-tab2_uploader_clear_btn button p,
         div.st-key-tab2_uploader_clear_btn button span,
+        div.st-key-tab3_uploader_clear_btn button p,
         div.st-key-tab3_uploader_clear_btn button span {
-            margin: 0 !important;
-            padding: 0 !important;
-            line-height: 1 !important;
-            font-size: 1.2rem !important;
+            color: #EF4444 !important;
         }
+        
         div.st-key-delete_template_btn button:hover,
         div.st-key-delete_confirm_btn button:hover,
         div.st-key-tab2_uploader_clear_btn button:hover,
         div.st-key-tab3_uploader_clear_btn button:hover {
-            background-color: #FEF2F2 !important;
-            border-color: #FECACA !important;
+            background-color: #FEE2E2 !important;
+            border-color: #FCA5A5 !important;
             transform: translateY(-1px);
             box-shadow: 0 4px 6px -1px rgba(239, 68, 68, 0.15) !important;
         }
         div.st-key-delete_template_btn button:hover span,
+        div.st-key-delete_template_btn button:hover p,
         div.st-key-delete_confirm_btn button:hover span,
+        div.st-key-delete_confirm_btn button:hover p,
         div.st-key-tab2_uploader_clear_btn button:hover span,
-        div.st-key-tab3_uploader_clear_btn button:hover span {
+        div.st-key-tab2_uploader_clear_btn button:hover p,
+        div.st-key-tab3_uploader_clear_btn button:hover span,
+        div.st-key-tab3_uploader_clear_btn button:hover p {
             color: #DC2626 !important;
         }
-        /* Căn nút ra giữa cột */
-        div.st-key-delete_template_btn,
-        div.st-key-tab2_uploader_clear_btn,
-        div.st-key-tab3_uploader_clear_btn {
-            display: flex !important;
-            justify-content: center !important;
-            align-items: center !important;
-        }
+
 
         /* ====== UPLOAD BUTTON & GEN BUTTON — hover xanh lá nhạt ====== */
         [data-testid="stFileUploader"] button:hover,
@@ -330,8 +303,8 @@ def _file_uploader_with_clear(label: str, key_prefix: str):
     with col_clear:
         if files:
             if st.button(
-                "\u200b", icon=":material/close:", key=f"{key_prefix}_clear_btn",
-                help=f"Xoá tất cả {len(files)} file đã chọn",
+                "Xoá", icon=":material/close:", key=f"{key_prefix}_clear_btn",
+                help=f"Xoá tất cả {len(files)} file đã chọn", use_container_width=True,
             ):
                 st.session_state[reset_key] += 1
                 st.rerun()
@@ -538,8 +511,8 @@ def page_templates():
     with col_delete:
         if choice:
             if st.button(
-                "\u200b", icon=":material/delete:", key="delete_template_btn",
-                help=f"Xoá vĩnh viễn khung mẫu '{choice}'",
+                "Xoá", icon=":material/delete:", key="delete_template_btn",
+                help=f"Xoá vĩnh viễn khung mẫu '{choice}'", use_container_width=True,
             ):
                 _confirm_delete_dialog(choice, tc_state_key)
 

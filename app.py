@@ -67,7 +67,6 @@ st.html(
         }
         
         /* ====== SIDEBAR NAVIGATION ====== */
-        /* Style cho st.page_link (các tab không active) */
         [data-testid="stPageLink"] a {
             transition: all 0.2s ease !important;
             border-radius: 8px !important;
@@ -87,40 +86,18 @@ st.html(
             background-color: #F3F4F6 !important;
             color: #1F2937 !important;
         }
-        /* Active tab — render bằng st.markdown nên chỉ cần reset margin cho wrapper */
-        .sidebar-active-link {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            padding: 10px 16px;
-            border-radius: 8px;
-            background: #2563EB;
-            color: #FFFFFF !important;
-            font-weight: 600;
-            font-size: 1rem;
-            margin: 4px 0;
-            line-height: 1.5;
-            cursor: default;
-            user-select: none;
-        }
-        .sidebar-active-link span {
-            color: #FFFFFF !important;
-            font-size: 18px;
-            flex-shrink: 0;
-        }
 
-        /* ====== NÚT XÓA (dạng icon-only, đỏ nhạt đỏ) ====== */
-        .st-key-delete_template_btn button,
-        .st-key-delete_confirm_btn button,
-        .st-key-tab2_uploader_clear_btn button,
-        .st-key-tab3_uploader_clear_btn button {
+        /* ====== NÚT XÓA (icon-only, đỏ nhạt) ====== */
+        div.st-key-delete_template_btn button,
+        div.st-key-delete_confirm_btn button,
+        div.st-key-tab2_uploader_clear_btn button,
+        div.st-key-tab3_uploader_clear_btn button {
             background-color: #FEF2F2 !important;
             color: #EF4444 !important;
             border: 1px solid #FECACA !important;
             border-radius: 8px !important;
             transition: all 0.2s ease !important;
             box-shadow: none !important;
-            /* Kích thước cố định để icon nằm giữa */
             width: 2.2rem !important;
             height: 2.2rem !important;
             min-width: 2.2rem !important;
@@ -130,11 +107,10 @@ st.html(
             justify-content: center !important;
             align-items: center !important;
         }
-        /* Wrapper div bên trong button — căn giữa icon */
-        .st-key-delete_template_btn button div,
-        .st-key-delete_confirm_btn button div,
-        .st-key-tab2_uploader_clear_btn button div,
-        .st-key-tab3_uploader_clear_btn button div {
+        div.st-key-delete_template_btn button div,
+        div.st-key-delete_confirm_btn button div,
+        div.st-key-tab2_uploader_clear_btn button div,
+        div.st-key-tab3_uploader_clear_btn button div {
             display: flex !important;
             justify-content: center !important;
             align-items: center !important;
@@ -144,50 +120,55 @@ st.html(
             width: 100% !important;
             height: 100% !important;
         }
-        /* Ẩn label text (zero-width space trong <p>) */
-        .st-key-delete_template_btn button p,
-        .st-key-delete_confirm_btn button p,
-        .st-key-tab2_uploader_clear_btn button p,
-        .st-key-tab3_uploader_clear_btn button p {
+        div.st-key-delete_template_btn button p,
+        div.st-key-delete_confirm_btn button p,
+        div.st-key-tab2_uploader_clear_btn button p,
+        div.st-key-tab3_uploader_clear_btn button p {
             display: none !important;
-            width: 0 !important;
-            height: 0 !important;
-            overflow: hidden !important;
         }
-        /* Icon — màu đỏ và không có margin */
-        .st-key-delete_template_btn button span,
-        .st-key-delete_confirm_btn button span,
-        .st-key-tab2_uploader_clear_btn button span,
-        .st-key-tab3_uploader_clear_btn button span {
+        div.st-key-delete_template_btn button span,
+        div.st-key-delete_confirm_btn button span,
+        div.st-key-tab2_uploader_clear_btn button span,
+        div.st-key-tab3_uploader_clear_btn button span {
             color: #EF4444 !important;
             margin: 0 !important;
             padding: 0 !important;
             line-height: 1 !important;
             font-size: 1.2rem !important;
         }
-        /* Hover — đỏ đậm hơn */
-        .st-key-delete_template_btn button:hover,
-        .st-key-delete_confirm_btn button:hover,
-        .st-key-tab2_uploader_clear_btn button:hover,
-        .st-key-tab3_uploader_clear_btn button:hover {
+        div.st-key-delete_template_btn button:hover,
+        div.st-key-delete_confirm_btn button:hover,
+        div.st-key-tab2_uploader_clear_btn button:hover,
+        div.st-key-tab3_uploader_clear_btn button:hover {
             background-color: #FEE2E2 !important;
             border-color: #FCA5A5 !important;
             transform: translateY(-1px);
             box-shadow: 0 4px 6px -1px rgba(239, 68, 68, 0.15) !important;
         }
-        .st-key-delete_template_btn button:hover span,
-        .st-key-delete_confirm_btn button:hover span,
-        .st-key-tab2_uploader_clear_btn button:hover span,
-        .st-key-tab3_uploader_clear_btn button:hover span {
+        div.st-key-delete_template_btn button:hover span,
+        div.st-key-delete_confirm_btn button:hover span,
+        div.st-key-tab2_uploader_clear_btn button:hover span,
+        div.st-key-tab3_uploader_clear_btn button:hover span {
             color: #DC2626 !important;
         }
         /* Căn nút ra giữa cột */
-        .st-key-delete_template_btn,
-        .st-key-tab2_uploader_clear_btn,
-        .st-key-tab3_uploader_clear_btn {
-            display: flex;
-            justify-content: center;
-            align-items: center;
+        div.st-key-delete_template_btn,
+        div.st-key-tab2_uploader_clear_btn,
+        div.st-key-tab3_uploader_clear_btn {
+            display: flex !important;
+            justify-content: center !important;
+            align-items: center !important;
+        }
+
+        /* ====== UPLOAD BUTTON — hover xanh lá nhạt ====== */
+        [data-testid="stFileUploader"] button:hover {
+            background-color: #F0FDF4 !important;
+            border-color: #86EFAC !important;
+            color: #16A34A !important;
+        }
+        [data-testid="stFileUploader"] button:hover span,
+        [data-testid="stFileUploader"] button:hover p {
+            color: #16A34A !important;
         }
     </style>
     """
@@ -349,7 +330,7 @@ def _file_uploader_with_clear(label: str, key_prefix: str):
         if files:
             if st.button(
                 "\u200b", icon=":material/close:", key=f"{key_prefix}_clear_btn",
-                help=f"Xoá tất cả {len(files)} file đã chọn", use_container_width=True,
+                help=f"Xoá tất cả {len(files)} file đã chọn",
             ):
                 st.session_state[reset_key] += 1
                 st.rerun()
@@ -557,7 +538,7 @@ def page_templates():
         if choice:
             if st.button(
                 "\u200b", icon=":material/delete:", key="delete_template_btn",
-                help=f"Xoá vĩnh viễn khung mẫu '{choice}'", use_container_width=True,
+                help=f"Xoá vĩnh viễn khung mẫu '{choice}'",
             ):
                 _confirm_delete_dialog(choice, tc_state_key)
 
@@ -903,11 +884,15 @@ with st.sidebar:
     ]
     for i, (page, label, icon_name) in enumerate(nav_items):
         if i == active_idx:
-            # Tab đang chọn — render HTML thuần để luôn xanh, không phụ thuộc vào CSS Streamlit
+            # Tab đang chọn — render HTML inline style 100% (không phụ thuộc CSS class)
             st.markdown(f'''
-                <div class="sidebar-active-link">
-                    <span style="font-family:'Material Symbols Rounded';font-size:20px;color:#FFFFFF;line-height:1;flex-shrink:0;">{icon_name}</span>
-                    <span style="color:#FFFFFF;font-size:1rem;font-weight:600;">{label}</span>
+                <div style="display:flex;align-items:center;gap:12px;padding:10px 16px;
+                    border-radius:8px;background-color:#2563EB;color:#FFFFFF;
+                    font-weight:600;font-size:1rem;line-height:1.5;
+                    margin:4px 0;cursor:default;user-select:none;">
+                    <span style="font-family:'Material Symbols Rounded';font-size:20px;
+                        color:#FFFFFF;line-height:1;flex-shrink:0;">{icon_name}</span>
+                    <span style="color:#FFFFFF;">{label}</span>
                 </div>
             ''', unsafe_allow_html=True)
         else:

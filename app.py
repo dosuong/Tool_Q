@@ -27,11 +27,34 @@ st.html(
     """
     <style>
         html {font-size: 17px;}
-        /* Giảm tối đa khoảng trống thừa ở trên cùng của trang */
+        /* Giảm tối đa khoảng trống thừa ở trên cùng của trang và Sidebar */
         .main .block-container {padding-top: 1.5rem !important; padding-bottom: 3rem !important; max-width: 1200px !important;}
-        [data-testid="stSidebarUserContent"] {padding-top: 1.5rem !important;}
+        
+        [data-testid="stSidebarHeader"] {padding: 1rem 1rem 0 1rem !important;}
+        [data-testid="stSidebarUserContent"] {padding-top: 0 !important;}
+        [data-testid="stSidebarContent"] {padding-top: 0 !important;}
+        
         header[data-testid="stHeader"] {height: 3rem !important;}
         [data-testid="stHeader"] > div {padding-top: 0.5rem !important;}
+        
+        /* Phóng to và tạo kiểu cho Tool_Q header và caption ở sidebar */
+        [data-testid="stSidebar"] h3 {
+            font-size: 30px !important;
+            font-weight: 800 !important;
+            color: #1F2937 !important;
+            margin-bottom: 5px !important;
+        }
+        [data-testid="stSidebar"] h3 span.material-symbols-rounded {
+            font-size: 32px !important;
+            margin-right: 5px !important;
+        }
+        [data-testid="stSidebar"] [data-testid="stCaptionContainer"] {
+            font-size: 17px !important;
+            color: #4B5563 !important;
+            line-height: 1.5 !important;
+            margin-bottom: 20px !important;
+        }
+
         div[data-testid="stMetric"] {
             background: #F9FAFB; border: 1px solid #E5E7EB; border-radius: 10px;
             padding: 0.7rem 1rem;
@@ -895,17 +918,9 @@ def page_exam():
         _render_results(*st.session_state["tab3_results"], key_prefix="tab3")
 
 with st.sidebar:
-    st.html(
-        """
-        <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 8px;">
-            <span class="material-symbols-rounded" style="font-size: 32px; font-weight: 600; color: #1F2937;">fact_check</span>
-            <h2 style="margin: 0; padding: 0; font-size: 30px; font-weight: 800; color: #1F2937; letter-spacing: -0.5px;">Tool_Q</h2>
-        </div>
-        <p style="font-size: 17px; color: #4B5563; line-height: 1.5; margin: 0 0 20px 0;">
-            Chấm bài lập trình Python tự động cho giáo viên.
-        </p>
-        """
-    )
+    st.markdown("<div id='custom-sidebar-header'></div>", unsafe_allow_html=True)
+    st.subheader("Tool_Q", icon=":material/fact_check:")
+    st.caption("Chấm bài lập trình Python tự động cho giáo viên.")
 
 pages = [
     st.Page(page_templates, title="Quản lý khung mẫu", icon=":material/folder_open:", default=True),

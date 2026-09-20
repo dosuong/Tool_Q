@@ -86,10 +86,10 @@ st.html(
             color: #4B5563 !important;
             font-weight: 500 !important;
             text-decoration: none !important;
-            font-size: 1.1rem !important;
+            font-size: 1rem !important;
         }
         [data-testid="stPageLink"] a p, [data-testid="stPageLink"] a span {
-            font-size: 1.1rem !important;
+            font-size: 1rem !important;
         }
         [data-testid="stPageLink"] a:hover {
             background-color: #DBEAFE !important;
@@ -882,11 +882,11 @@ with st.sidebar:
             st.markdown(f'''
                 <div style="display:flex;align-items:center;gap:12px;padding:10px 16px;
                     border-radius:8px;background-color:#2563EB;color:#FFFFFF;
-                    font-weight:600;font-size:1.1rem;line-height:1.5;
+                    font-weight:600;font-size:1rem;line-height:1.5;
                     margin:4px 0;cursor:default;user-select:none;">
-                    <span style="font-family:'Material Symbols Rounded';font-size:24px;
+                    <span style="font-family:'Material Symbols Rounded';font-size:22px;
                         color:#FFFFFF;line-height:1;flex-shrink:0;">{icon_name}</span>
-                    <span style="color:#FFFFFF;font-size:1.1rem;">{label}</span>
+                    <span style="color:#FFFFFF;font-size:1rem;">{label}</span>
                 </div>
             ''', unsafe_allow_html=True)
         else:

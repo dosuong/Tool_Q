@@ -108,14 +108,16 @@ st.markdown(
             border: 1px solid #FECACA !important;
             transition: all 0.2s ease !important;
         }
-        div.st-key-delete_template_btn button div,
-        div.st-key-delete_confirm_btn button div,
-        div.st-key-tab2_uploader_clear_btn button div,
-        div.st-key-tab3_uploader_clear_btn button div {
+        /* Bắt buộc dùng `button > div` để chỉ tác động vào lớp bọc ngoài cùng, 
+           tránh ép độ dài 100% lên lớp bọc chữ bên trong làm đẩy icon ra rìa */
+        div.st-key-delete_template_btn button > div,
+        div.st-key-delete_confirm_btn button > div,
+        div.st-key-tab2_uploader_clear_btn button > div,
+        div.st-key-tab3_uploader_clear_btn button > div {
             display: flex !important;
             justify-content: center !important;
             align-items: center !important;
-            width: 100% !important;
+            gap: 0 !important;
         }
         div.st-key-delete_template_btn button p,
         div.st-key-delete_confirm_btn button p,

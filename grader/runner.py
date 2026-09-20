@@ -44,17 +44,13 @@ def run_capture_only(solution_file: Path, input_text: str, timeout: float = 5.0)
     return proc.stdout, proc.stderr, proc.returncode
 
 
-def run_function_capture_only(solution_file: Path, function_name: str, call_args, call_kwargs=None, timeout: float = 5.0):
-    """Chạy solution.py ở chế độ hàm (dùng để sinh đáp án mẫu, không so sánh).
-
-    Trả về (gia_tri_tra_ve, thong_bao_loi) — gia_tri_tra_ve là None nếu có lỗi.
-    """
-    call_kwargs = call_kwargs or {}
+def _call_function_wrapper(target_file: Path, function_name: str, call_args, call_kwargs, timeout: float):
+    """Gọi function_wrapper.py trong subprocess riêng, trả về (payload_dict_hoac_None, thong_bao_loi)."""
     try:
         proc = _run_subprocess(
             [
-                sys.executable, str(_WRAPPER_PATH), str(solution_file), function_name,
-                json.dumps(call_args), json.dumps(call_kwargs),
+                sys.executable, str(_WRAPPER_PATH), str(target_file), function_name,
+                json.dumps(call_args), json.dumps(call_kwargs or {}),
             ],
             None, timeout,
         )
@@ -78,6 +74,17 @@ def run_function_capture_only(solution_file: Path, function_name: str, call_args
         return json.loads(result_line), None
     except json.JSONDecodeError:
         return None, "Kết quả trả về không phải JSON hợp lệ."
+
+
+def run_function_capture_only(solution_file: Path, function_name: str, call_args, call_kwargs=None, timeout: float = 5.0):
+    """Chạy solution.py ở chế độ hàm (dùng để sinh đáp án mẫu, không so sánh).
+
+    Trả về (gia_tri_tra_ve, noi_dung_da_in_ra, thong_bao_loi) — 2 mục đầu là None/"" nếu có lỗi.
+    """
+    payload, err = _call_function_wrapper(solution_file, function_name, call_args, call_kwargs, timeout)
+    if err:
+        return None, "", err
+    return payload.get("return"), payload.get("stdout", ""), None
 
 
 def _parse_traceback(stderr: str):
@@ -123,51 +130,51 @@ def _try_function_mode(student_file: Path, function_name: str, test_case: TestCa
     call_args = test_case.call_args if test_case.call_args is not None else []
     call_kwargs = test_case.call_kwargs if test_case.call_kwargs is not None else {}
 
-    try:
-        proc = _run_subprocess(
-            [
-                sys.executable, str(_WRAPPER_PATH), str(student_file), function_name,
-                json.dumps(call_args), json.dumps(call_kwargs),
-            ],
-            None, test_case.timeout,
-        )
-    except subprocess.TimeoutExpired:
-        result.timed_out = True
-        result.short_message = f"Quá thời gian cho phép ({test_case.timeout}s) khi gọi hàm — nghi ngờ vòng lặp vô hạn."
+    payload, err = _call_function_wrapper(student_file, function_name, call_args, call_kwargs, test_case.timeout)
+
+    if err:
+        if "Quá thời gian cho phép" in err:
+            result.timed_out = True
+            result.short_message = err
+        else:
+            result.crashed = True
+            result.short_message = f"Lỗi khi gọi hàm '{function_name}': {err}"
+            result.error_message = err
         return result
 
-    result.returncode = proc.returncode
-    result.raw_stderr = proc.stderr
+    actual_return = payload.get("return")
+    actual_stdout = payload.get("stdout", "")
 
-    if proc.returncode != 0 or proc.stderr.strip():
-        _apply_crash(result, proc.stderr, context=f"Lỗi khi gọi hàm '{function_name}'")
+    check_return = test_case.expected_return is not None
+    check_output = bool(test_case.expected_output.strip())
+
+    exp_stdout_norm = _normalize(test_case.expected_output, test_case.ignore_trailing_whitespace)
+    act_stdout_norm = _normalize(actual_stdout, test_case.ignore_trailing_whitespace)
+
+    return_ok = (actual_return == test_case.expected_return) if check_return else True
+    output_ok = (exp_stdout_norm == act_stdout_norm) if check_output else True
+
+    result.actual_output = actual_stdout
+
+    if not check_return and not check_output:
+        result.passed = True
+        result.short_message = "OK (hàm chạy không lỗi — chưa khai báo expected_return/expected_output để so khớp)"
         return result
 
-    result_line = ""
-    for line in reversed(proc.stdout.splitlines()):
-        if line.startswith(RESULT_MARKER):
-            result_line = line[len(RESULT_MARKER):]
-            break
-
-    if not result_line:
-        result.short_message = "Không nhận được kết quả trả về từ hàm."
-        return result
-
-    try:
-        actual_return = json.loads(result_line)
-    except json.JSONDecodeError:
-        result.short_message = "Kết quả trả về không đọc được (không phải JSON hợp lệ)."
-        return result
-
-    result.actual_output = json.dumps(actual_return, ensure_ascii=False)
-    result.expected_output = json.dumps(test_case.expected_return, ensure_ascii=False)
-
-    if actual_return == test_case.expected_return:
+    if return_ok and output_ok:
         result.passed = True
         result.short_message = "OK"
-    else:
-        result.short_message = "Giá trị trả về không khớp với đáp án."
-        result.diff_summary = f"Kỳ vọng: {result.expected_output}\nThực tế: {result.actual_output}"
+        return result
+
+    messages = []
+    if check_return and not return_ok:
+        exp_json = json.dumps(test_case.expected_return, ensure_ascii=False)
+        act_json = json.dumps(actual_return, ensure_ascii=False)
+        messages.append(f"Giá trị trả về sai — kỳ vọng {exp_json}, thực tế {act_json}")
+    if check_output and not output_ok:
+        messages.append("Nội dung in ra (print) trong hàm không khớp đáp án mẫu")
+        result.diff_summary = _first_diff(exp_stdout_norm, act_stdout_norm)
+    result.short_message = "; ".join(messages)
     return result
 
 
@@ -205,11 +212,7 @@ def grade_one(
 
     act_norm = _normalize(proc.stdout, test_case.ignore_trailing_whitespace)
 
-    can_try_function = (
-        function_name
-        and test_case.call_args is not None
-        and test_case.expected_return is not None
-    )
+    can_try_function = function_name is not None and test_case.call_args is not None
 
     if act_norm == "" and can_try_function:
         return _try_function_mode(student_file, function_name, test_case, result)

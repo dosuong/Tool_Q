@@ -1,10 +1,14 @@
 """Chạy trong 1 subprocess riêng (cách ly khỏi tiến trình chính của app).
 
 Import file học sinh như 1 module, gọi hàm theo tên quy ước với các
-tham số cho trước, rồi in giá trị trả về ra stdout kèm marker để phân
-biệt với các print() thừa khác có thể có trong module.
+tham số cho trước. Bắt lại cả (a) giá trị hàm trả về và (b) toàn bộ
+nội dung print() xảy ra TRONG LÚC gọi hàm, rồi in ra 1 dòng JSON duy
+nhất kèm marker để phân biệt với các print() khác (nếu có) ở code
+top-level của module, vốn chạy trước khi bắt đầu ghi lại stdout.
 """
+import contextlib
 import importlib.util
+import io
 import json
 import sys
 
@@ -25,8 +29,13 @@ def main():
     func = getattr(module, function_name)
     args = json.loads(call_args_json)
     kwargs = json.loads(call_kwargs_json)
-    result = func(*args, **kwargs)
-    print(RESULT_MARKER + json.dumps(result))
+
+    captured = io.StringIO()
+    with contextlib.redirect_stdout(captured):
+        result = func(*args, **kwargs)
+
+    payload = {"return": result, "stdout": captured.getvalue()}
+    print(RESULT_MARKER + json.dumps(payload))
 
 
 if __name__ == "__main__":

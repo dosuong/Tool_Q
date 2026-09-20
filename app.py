@@ -86,29 +86,19 @@ st.html(
         [data-testid="stPageLink"] a:hover {
             background-color: #F3F4F6 !important; /* Xám rất nhẹ khi hover */
             color: #1F2937 !important;
-        /* Active state: Màu xanh đậm tương tự nút Lưu khung mẫu (Primary)
-           (Streamlit ẩn trạng thái active của page_link, nên ta dùng disabled=(current_page)
-           để xác định tab đang chọn và style lại nó!) */
-        [data-testid="stPageLink"] a[aria-current="page"],
-        [data-testid="stPageLink"] a[data-active="true"],
-        [data-testid="stPageLink"] a[disabled],
-        [data-testid="stPageLink"] a[aria-disabled="true"] {
+        /* Active state: Màu xanh đậm tương tự nút Lưu khung mẫu (Primary) */
+        [data-testid="stPageLink"][data-active="true"] a,
+        [data-testid="stPageLink"] a[aria-current="page"] {
             background-color: #2563EB !important; /* Xanh đậm */
             color: #FFFFFF !important; /* Chữ trắng */
             font-weight: 600 !important;
             border: none !important; /* Bỏ viền để giống nút thật */
             box-shadow: 0 4px 6px -1px rgba(37, 99, 235, 0.2) !important; /* Đổ bóng nhẹ cho đẹp */
-            opacity: 1 !important; /* Chống mờ do disabled */
-            cursor: default !important; /* Không cho click */
         }
+        [data-testid="stPageLink"][data-active="true"] a span,
+        [data-testid="stPageLink"][data-active="true"] a div,
         [data-testid="stPageLink"] a[aria-current="page"] span,
-        [data-testid="stPageLink"] a[aria-current="page"] div,
-        [data-testid="stPageLink"] a[data-active="true"] span,
-        [data-testid="stPageLink"] a[data-active="true"] div,
-        [data-testid="stPageLink"] a[disabled] span,
-        [data-testid="stPageLink"] a[disabled] div,
-        [data-testid="stPageLink"] a[aria-disabled="true"] span,
-        [data-testid="stPageLink"] a[aria-disabled="true"] div {
+        [data-testid="stPageLink"] a[aria-current="page"] div {
             color: #FFFFFF !important; /* Đảm bảo icon/text cùng màu trắng */
         }
 
@@ -397,7 +387,7 @@ def _file_uploader_with_clear(label: str, key_prefix: str):
     with col_clear:
         if files:
             if st.button(
-                " ", icon=":material/close:", key=f"{key_prefix}_clear_btn",
+                "\u200b", icon=":material/close:", key=f"{key_prefix}_clear_btn",
                 help=f"Xoá tất cả {len(files)} file đã chọn", use_container_width=True,
             ):
                 st.session_state[reset_key] += 1
@@ -605,7 +595,7 @@ def page_templates():
     with col_delete:
         if choice:
             if st.button(
-                " ", icon=":material/delete:", key="delete_template_btn",
+                "\u200b", icon=":material/delete:", key="delete_template_btn",
                 help=f"Xoá vĩnh viễn khung mẫu '{choice}'", use_container_width=True,
             ):
                 _confirm_delete_dialog(choice, tc_state_key)
@@ -944,9 +934,9 @@ pages = [
 current_page = st.navigation(pages, position="hidden")
 
 with st.sidebar:
-    st.page_link(pages[0], label="Quản lý khung mẫu", icon=":material/folder_open:", disabled=(current_page == pages[0]))
-    st.page_link(pages[1], label="Chấm 1 đề", icon=":material/rule:", disabled=(current_page == pages[1]))
-    st.page_link(pages[2], label="Chấm cả kỳ thi", icon=":material/library_books:", disabled=(current_page == pages[2]))
+    st.page_link(pages[0], label="Quản lý khung mẫu", icon=":material/folder_open:")
+    st.page_link(pages[1], label="Chấm 1 đề", icon=":material/rule:")
+    st.page_link(pages[2], label="Chấm cả kỳ thi", icon=":material/library_books:")
     
     st.divider()
     st.html(f"<div style='font-size: 16px; color: #4B5563;'>Số khung mẫu hiện có: <b style='color: #1F2937;'>{len(list_templates())}</b></div>")

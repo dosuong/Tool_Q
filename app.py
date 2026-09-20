@@ -26,11 +26,11 @@ CONSTRUCT_OPTIONS = ["For", "While", "ListComp", "Recursion"]
 st.html(
     """
     <style>
-        html, body, [class*="st-"] { font-size: 18px !important; }
+        html, body { font-size: 18px !important; }
         /* Giữ nguyên kích thước tiêu đề như trước khi tăng base size */
-        h1, .stMarkdown h1, [data-testid="stHeader"] h1 { font-size: 40px !important; }
-        h2, .stMarkdown h2 { font-size: 32px !important; }
-        h3, .stMarkdown h3 { font-size: 24px !important; }
+        div[data-testid="stMarkdownContainer"] > h1, h1 { font-size: 36px !important; }
+        div[data-testid="stMarkdownContainer"] > h2, h2 { font-size: 28px !important; }
+        div[data-testid="stMarkdownContainer"] > h3, h3 { font-size: 22px !important; }
         
         /* Giảm tối đa khoảng trống thừa ở trên cùng của trang và Sidebar */
         .main .block-container {padding-top: 1.5rem !important; padding-bottom: 3rem !important; max-width: 1200px !important;}

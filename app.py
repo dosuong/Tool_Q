@@ -86,17 +86,24 @@ st.html(
             background-color: #F3F4F6 !important;
             color: #1F2937 !important;
         }
-        /* Active state: Tab đang được chọn — xanh đậm như nút primary */
-        [data-testid="stPageLink"] a[aria-current="page"] {
+        /* Active state: Tab đang được chọn — xanh đậm như nút primary.
+           Dùng aria-current="page" (tự động) VÀ aria-disabled="true" (khi disabled=True) */
+        [data-testid="stPageLink"] a[aria-current="page"],
+        [data-testid="stPageLink"] a[aria-disabled="true"] {
             background-color: #2563EB !important;
             color: #FFFFFF !important;
             font-weight: 600 !important;
             border: none !important;
             box-shadow: 0 4px 6px -1px rgba(37, 99, 235, 0.2) !important;
+            opacity: 1 !important;
+            pointer-events: none;
         }
         [data-testid="stPageLink"] a[aria-current="page"] span,
         [data-testid="stPageLink"] a[aria-current="page"] div,
-        [data-testid="stPageLink"] a[aria-current="page"] p {
+        [data-testid="stPageLink"] a[aria-current="page"] p,
+        [data-testid="stPageLink"] a[aria-disabled="true"] span,
+        [data-testid="stPageLink"] a[aria-disabled="true"] div,
+        [data-testid="stPageLink"] a[aria-disabled="true"] p {
             color: #FFFFFF !important;
         }
 
@@ -147,27 +154,30 @@ st.html(
             width: 2.2rem !important;
             height: 2.2rem !important;
             min-width: 2.2rem !important;
+            max-width: 2.2rem !important;
             padding: 0 !important;
-            display: inline-flex !important;
+            display: flex !important;
             justify-content: center !important;
             align-items: center !important;
+            overflow: hidden !important;
         }
-        .st-key-delete_template_btn button p,
-        .st-key-tab2_uploader_clear_btn button p,
-        .st-key-tab3_uploader_clear_btn button p {
+        /* Ẩn TOÀN BỘ text/p bên trong, chỉ giữ icon */
+        .st-key-delete_template_btn button > *:not([data-testid="stIconMaterial"]):not(.material-symbols-rounded),
+        .st-key-tab2_uploader_clear_btn button > *:not([data-testid="stIconMaterial"]):not(.material-symbols-rounded),
+        .st-key-tab3_uploader_clear_btn button > *:not([data-testid="stIconMaterial"]):not(.material-symbols-rounded) {
             display: none !important;
         }
-        .st-key-delete_template_btn button div,
-        .st-key-tab2_uploader_clear_btn button div,
-        .st-key-tab3_uploader_clear_btn button div,
-        .st-key-delete_template_btn button span.material-symbols-rounded,
-        .st-key-tab2_uploader_clear_btn button span.material-symbols-rounded,
-        .st-key-tab3_uploader_clear_btn button span.material-symbols-rounded {
+        /* Icon chiếm toàn bộ không gian button */
+        .st-key-delete_template_btn button [data-testid="stIconMaterial"],
+        .st-key-tab2_uploader_clear_btn button [data-testid="stIconMaterial"],
+        .st-key-tab3_uploader_clear_btn button [data-testid="stIconMaterial"] {
             display: flex !important;
             justify-content: center !important;
             align-items: center !important;
             margin: 0 !important;
             padding: 0 !important;
+            width: 100% !important;
+            height: 100% !important;
             line-height: 1 !important;
         }
         /* Căn nút ra giữa cột */
@@ -176,6 +186,7 @@ st.html(
         .st-key-tab3_uploader_clear_btn {
             display: flex;
             justify-content: center;
+            align-items: center;
         }
     </style>
     """
@@ -883,9 +894,9 @@ pages = [
 current_page = st.navigation(pages, position="hidden")
 
 with st.sidebar:
-    st.page_link(pages[0], label="Quản lý khung mẫu", icon=":material/folder_open:")
-    st.page_link(pages[1], label="Chấm 1 đề", icon=":material/rule:")
-    st.page_link(pages[2], label="Chấm cả kỳ thi", icon=":material/library_books:")
+    st.page_link(pages[0], label="Quản lý khung mẫu", icon=":material/folder_open:", disabled=(current_page == pages[0]))
+    st.page_link(pages[1], label="Chấm 1 đề", icon=":material/rule:", disabled=(current_page == pages[1]))
+    st.page_link(pages[2], label="Chấm cả kỳ thi", icon=":material/library_books:", disabled=(current_page == pages[2]))
     
     st.divider()
     st.html(f"<div style='font-size: 16px; color: #4B5563;'>Số khung mẫu hiện có: <b style='color: #1F2937;'>{len(list_templates())}</b></div>")

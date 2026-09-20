@@ -906,8 +906,8 @@ with st.sidebar:
             # Tab đang chọn — render HTML thuần để luôn xanh, không phụ thuộc vào CSS Streamlit
             st.markdown(f'''
                 <div class="sidebar-active-link">
-                    <span class="material-symbols-rounded">{icon_name}</span>
-                    <span style="color:#FFFFFF;font-size:1rem;">{label}</span>
+                    <span style="font-family:'Material Symbols Rounded';font-size:20px;color:#FFFFFF;line-height:1;flex-shrink:0;">{icon_name}</span>
+                    <span style="color:#FFFFFF;font-size:1rem;font-weight:600;">{label}</span>
                 </div>
             ''', unsafe_allow_html=True)
         else:

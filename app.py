@@ -51,58 +51,61 @@ st.html(
             background: #EEF2FF;
             border-radius: 8px;
         }
-        /* Sidebar Navigation Styling - Căn giữa và phối màu chuyên nghiệp */
-        [data-testid="stSidebarNav"] ul {
-            display: flex;
-            flex-direction: column;
-            align-items: center; /* Căn giữa vùng chứa */
-        }
-        [data-testid="stSidebarNav"] a {
+        /* Sidebar Navigation Styling - Dành cho st.page_link */
+        [data-testid="stPageLink"] a {
             transition: all 0.3s ease !important;
             border-radius: 12px !important;
             display: flex !important;
             justify-content: center !important; /* Căn giữa chữ và icon */
             align-items: center !important;
             gap: 10px !important;
-            margin: 6px 16px !important;
+            margin: 6px 0 !important;
             padding: 12px 20px !important;
-            width: calc(100% - 32px) !important;
-            color: #374151 !important;
+            width: 100% !important;
+            background-color: transparent;
+            color: #4B5563 !important;
             font-weight: 500 !important;
+            text-decoration: none !important;
         }
-        [data-testid="stSidebarNav"] a:hover {
+        [data-testid="stPageLink"] a:hover {
             background: linear-gradient(135deg, #EEF2FF 0%, #E0E7FF 100%) !important;
             color: #4338CA !important;
             transform: translateY(-2px);
             box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
         }
-        [data-testid="stSidebarNav"] a[aria-current="page"] {
+        /* st.page_link tự thêm data-active="true" hoặc aria-current="page" (tuỳ version Streamlit),
+           ta bao phủ cả 2 trường hợp */
+        [data-testid="stPageLink"] a[aria-current="page"],
+        [data-testid="stPageLink"] a[data-active="true"] {
             background: linear-gradient(135deg, #4F46E5 0%, #6366F1 100%) !important;
             color: #FFFFFF !important;
             font-weight: 700 !important;
             box-shadow: 0 4px 15px rgba(79, 70, 229, 0.4) !important;
         }
-        [data-testid="stSidebarNav"] a[aria-current="page"] span,
-        [data-testid="stSidebarNav"] a[aria-current="page"] div {
+        [data-testid="stPageLink"] a[aria-current="page"] span,
+        [data-testid="stPageLink"] a[aria-current="page"] div,
+        [data-testid="stPageLink"] a[data-active="true"] span,
+        [data-testid="stPageLink"] a[data-active="true"] div {
             color: #FFFFFF !important; /* Đảm bảo icon/text cũng đổi màu */
         }
-        [data-testid="stSidebarNav"] a:focus-visible {
+        [data-testid="stPageLink"] a:focus-visible {
             background: #F59E0B !important;
             color: #FFFFFF !important;
             box-shadow: 0 0 0 4px rgba(245, 158, 11, 0.4) !important;
             transform: scale(1.02);
         }
 
-        /* Nút xoá — tô đỏ rực rỡ, dễ nhận diện */
+        /* Nút xoá — Tinh tế, mềm mại và chuyên nghiệp hơn */
         .st-key-delete_template_btn button,
         .st-key-delete_confirm_btn button,
         .st-key-tab2_uploader_clear_btn button,
         .st-key-tab3_uploader_clear_btn button {
-            background-color: #EF4444 !important;
-            color: #FFFFFF !important;
-            border: 1px solid #DC2626 !important;
+            background-color: #FEF2F2 !important;
+            color: #EF4444 !important;
+            border: 1px solid #FECACA !important;
+            border-radius: 8px !important; /* bo góc mềm thay vì tròn xoe */
             transition: all 0.2s ease !important;
-            box-shadow: 0 2px 5px rgba(239, 68, 68, 0.3) !important;
+            box-shadow: none !important;
         }
         .st-key-delete_template_btn button p,
         .st-key-delete_confirm_btn button p,
@@ -112,25 +115,48 @@ st.html(
         .st-key-delete_confirm_btn button span,
         .st-key-tab2_uploader_clear_btn button span,
         .st-key-tab3_uploader_clear_btn button span {
-             color: #FFFFFF !important;
+             color: #EF4444 !important;
         }
         .st-key-delete_template_btn button:hover,
         .st-key-delete_confirm_btn button:hover,
         .st-key-tab2_uploader_clear_btn button:hover,
         .st-key-tab3_uploader_clear_btn button:hover {
-            background-color: #DC2626 !important;
-            color: #FFFFFF !important;
-            transform: scale(1.05);
-            box-shadow: 0 4px 8px rgba(220, 38, 38, 0.4) !important;
+            background-color: #FEE2E2 !important;
+            color: #DC2626 !important;
+            border-color: #FCA5A5 !important;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 6px -1px rgba(239, 68, 68, 0.15) !important;
         }
-        /* Nút xoá dạng icon tròn nhỏ */
+        .st-key-delete_template_btn button:hover p,
+        .st-key-delete_confirm_btn button:hover p,
+        .st-key-tab2_uploader_clear_btn button:hover p,
+        .st-key-tab3_uploader_clear_btn button:hover p,
+        .st-key-delete_template_btn button:hover span,
+        .st-key-delete_confirm_btn button:hover span,
+        .st-key-tab2_uploader_clear_btn button:hover span,
+        .st-key-tab3_uploader_clear_btn button:hover span {
+             color: #DC2626 !important;
+        }
+        
+        /* Cân chỉnh lại form icon/chữ của nút xóa nhỏ */
         .st-key-delete_template_btn button,
         .st-key-tab2_uploader_clear_btn button,
         .st-key-tab3_uploader_clear_btn button {
-            border-radius: 50% !important;
             width: 2.6rem !important;
             height: 2.6rem !important;
             min-width: 2.6rem !important;
+            padding: 0 !important;
+            display: inline-flex !important;
+            justify-content: center !important;
+            align-items: center !important;
+        }
+        .st-key-delete_template_btn button div,
+        .st-key-tab2_uploader_clear_btn button div,
+        .st-key-tab3_uploader_clear_btn button div {
+            display: flex !important;
+            justify-content: center !important;
+            align-items: center !important;
+            margin: 0 !important;
             padding: 0 !important;
         }
     </style>
@@ -825,19 +851,24 @@ def page_exam():
     if "tab3_results" in st.session_state:
         _render_results(*st.session_state["tab3_results"], key_prefix="tab3")
 
-
 with st.sidebar:
     st.subheader("Tool_Q", icon=":material/fact_check:")
     st.caption("Chấm bài lập trình Python tự động cho giáo viên.")
+    st.write("") # Thêm chút khoảng trống
 
 pages = [
     st.Page(page_templates, title="Quản lý khung mẫu", icon=":material/folder_open:", default=True),
     st.Page(page_grade_one, title="Chấm 1 đề", icon=":material/rule:"),
     st.Page(page_exam, title="Chấm cả kỳ thi", icon=":material/library_books:"),
 ]
-current_page = st.navigation(pages, position="sidebar")
+# Ẩn thanh điều hướng mặc định để tự vẽ bằng st.page_link
+current_page = st.navigation(pages, position="hidden")
 
 with st.sidebar:
+    st.page_link(pages[0], label="Quản lý khung mẫu", icon=":material/folder_open:")
+    st.page_link(pages[1], label="Chấm 1 đề", icon=":material/rule:")
+    st.page_link(pages[2], label="Chấm cả kỳ thi", icon=":material/library_books:")
+    
     st.divider()
     st.caption(f"Số khung mẫu hiện có: **{len(list_templates())}**")
 

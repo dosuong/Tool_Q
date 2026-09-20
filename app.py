@@ -87,19 +87,20 @@ st.html(
             background-color: #F3F4F6 !important; /* Xám rất nhẹ khi hover */
             color: #1F2937 !important;
         }
-        /* Active state: Màu xanh nhạt nhẹ nhàng, tương tự nút xóa màu đỏ nhạt */
+        /* Active state: Màu xanh đậm tương tự nút Lưu khung mẫu (Primary) */
         [data-testid="stPageLink"] a[aria-current="page"],
         [data-testid="stPageLink"] a[data-active="true"] {
-            background-color: #EFF6FF !important; /* Xanh nhạt */
-            color: #2563EB !important; /* Xanh dương đậm */
+            background-color: #2563EB !important; /* Xanh đậm */
+            color: #FFFFFF !important; /* Chữ trắng */
             font-weight: 600 !important;
-            border: 1px solid #BFDBFE !important; /* Viền mỏng mờ */
+            border: none !important; /* Bỏ viền để giống nút thật */
+            box-shadow: 0 4px 6px -1px rgba(37, 99, 235, 0.2) !important; /* Đổ bóng nhẹ cho đẹp */
         }
         [data-testid="stPageLink"] a[aria-current="page"] span,
         [data-testid="stPageLink"] a[aria-current="page"] div,
         [data-testid="stPageLink"] a[data-active="true"] span,
         [data-testid="stPageLink"] a[data-active="true"] div {
-            color: #2563EB !important; /* Đảm bảo icon/text cùng màu xanh */
+            color: #FFFFFF !important; /* Đảm bảo icon/text cùng màu trắng */
         }
 
         /* Nút xoá — Tinh tế, mềm mại và chuyên nghiệp hơn */

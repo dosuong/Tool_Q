@@ -27,7 +27,11 @@ st.html(
     """
     <style>
         html {font-size: 17px;}
-        .main .block-container {padding-top: 1.5rem; padding-bottom: 3rem; max-width: 1200px;}
+        /* Giảm tối đa khoảng trống thừa ở trên cùng của trang */
+        .main .block-container {padding-top: 1.5rem !important; padding-bottom: 3rem !important; max-width: 1200px !important;}
+        [data-testid="stSidebarUserContent"] {padding-top: 1.5rem !important;}
+        header[data-testid="stHeader"] {height: 3rem !important;}
+        [data-testid="stHeader"] > div {padding-top: 0.5rem !important;}
         div[data-testid="stMetric"] {
             background: #F9FAFB; border: 1px solid #E5E7EB; border-radius: 10px;
             padding: 0.7rem 1rem;

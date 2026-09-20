@@ -49,7 +49,7 @@ st.markdown(
         [data-testid="stSidebar"] h3 {
             font-size: 24px !important;
             font-weight: 800 !important;
-            color: #1F2937 !important;
+            color: var(--text-color) !important;
             margin-bottom: 5px !important;
         }
         [data-testid="stSidebar"] h3 span.material-symbols-rounded {
@@ -58,19 +58,19 @@ st.markdown(
         }
         [data-testid="stSidebar"] [data-testid="stCaptionContainer"] {
             font-size: 17px !important;
-            color: #4B5563 !important;
+            color: var(--text-color) !important;
+            opacity: 0.8;
             line-height: 1.5 !important;
             margin-bottom: 20px !important;
         }
 
         div[data-testid="stMetric"] {
-            background: #F9FAFB; border: 1px solid #E5E7EB; border-radius: 10px;
+            background: var(--secondary-background-color); border: 1px solid var(--secondary-background-color); border-radius: 10px;
             padding: 0.7rem 1rem;
         }
-        section[data-testid="stSidebar"] {background: #F9FAFB;}
 
         [data-testid="stExpander"] details[open] > summary {
-            background: #EEF2FF;
+            background: var(--secondary-background-color);
             border-radius: 8px;
         }
         
@@ -86,7 +86,8 @@ st.markdown(
             padding: 10px 16px !important;
             width: 100% !important;
             background-color: transparent !important;
-            color: #4B5563 !important;
+            color: var(--text-color) !important;
+            opacity: 0.85 !important;
             font-weight: 500 !important;
             text-decoration: none !important;
             font-size: 1rem !important;
@@ -95,8 +96,9 @@ st.markdown(
             font-size: 1rem !important;
         }
         [data-testid="stPageLink"] a:hover {
-            background-color: #DBEAFE !important;
-            color: #2563EB !important;
+            background-color: var(--secondary-background-color) !important;
+            color: var(--primary-color) !important;
+            opacity: 1 !important;
         }
 
         /* ====== NÚT XÓA (mặc định đỏ nhạt, hover đỏ đậm) ====== */
@@ -104,8 +106,8 @@ st.markdown(
         div.st-key-delete_confirm_btn button,
         div.st-key-tab2_uploader_clear_btn button,
         div.st-key-tab3_uploader_clear_btn button {
-            background-color: #FEF2F2 !important;
-            border: 1px solid #FECACA !important;
+            background-color: rgba(239, 68, 68, 0.05) !important;
+            border: 1px solid rgba(239, 68, 68, 0.25) !important;
             transition: all 0.2s ease !important;
         }
         /* Bắt buộc dùng `button > div` để chỉ tác động vào lớp bọc ngoài cùng, 
@@ -136,8 +138,8 @@ st.markdown(
         div.st-key-delete_confirm_btn button:hover,
         div.st-key-tab2_uploader_clear_btn button:hover,
         div.st-key-tab3_uploader_clear_btn button:hover {
-            background-color: #FEE2E2 !important;
-            border-color: #FCA5A5 !important;
+            background-color: rgba(239, 68, 68, 0.15) !important;
+            border-color: rgba(239, 68, 68, 0.45) !important;
             transform: translateY(-1px);
             box-shadow: 0 4px 6px -1px rgba(239, 68, 68, 0.15) !important;
         }
@@ -157,8 +159,8 @@ st.markdown(
         [data-testid="stFileUploader"] button:hover,
         div.st-key-gen_program_btn button:hover,
         div.st-key-gen_function_btn button:hover {
-            background-color: #F0FDF4 !important;
-            border-color: #86EFAC !important;
+            background-color: rgba(34, 197, 94, 0.1) !important;
+            border-color: rgba(34, 197, 94, 0.35) !important;
             color: #16A34A !important;
         }
         [data-testid="stFileUploader"] button:hover span,
@@ -884,10 +886,10 @@ with st.sidebar:
     ]
     for i, (page, label, icon_name) in enumerate(nav_items):
         if i == active_idx:
-            # Tab đang chọn — render HTML inline style 100% (không phụ thuộc CSS class)
+            # Tab đang chọn — render HTML dùng CSS variables để tuỳ biến Light/Dark
             st.markdown(f'''
                 <div style="display:flex;align-items:center;gap:12px;padding:10px 16px;
-                    border-radius:8px;background-color:#2563EB;color:#FFFFFF;
+                    border-radius:8px;background-color:var(--primary-color);color:#FFFFFF;
                     font-weight:600;font-size:1rem;line-height:1.5;
                     margin:4px 0;cursor:default;user-select:none;">
                     <span style="font-family:'Material Symbols Rounded';font-size:22px;
@@ -899,6 +901,6 @@ with st.sidebar:
             st.page_link(page, label=label, icon=f":material/{icon_name}:")
     
     st.divider()
-    st.html(f"<div style='font-size: 16px; color: #4B5563;'>Số khung mẫu hiện có: <b style='color: #1F2937;'>{len(list_templates())}</b></div>")
+    st.html(f"<div style='font-size: 16px; color: var(--text-color); opacity: 0.8;'>Số khung mẫu hiện có: <b style='opacity: 1;'>{len(list_templates())}</b></div>")
 
 current_page.run()

@@ -55,15 +55,30 @@ st.html(
 
         /* Nút xoá — tô đỏ, dùng key= để tạo class .st-key-<key> riêng cho từng nút */
         .st-key-delete_template_btn button,
-        .st-key-delete_confirm_btn button {
+        .st-key-delete_confirm_btn button,
+        .st-key-tab2_uploader_clear_btn button,
+        .st-key-tab3_uploader_clear_btn button {
             background-color: #FEE2E2 !important;
             color: #B3261E !important;
             border: 1px solid #FCA5A5 !important;
         }
         .st-key-delete_template_btn button:hover,
-        .st-key-delete_confirm_btn button:hover {
+        .st-key-delete_confirm_btn button:hover,
+        .st-key-tab2_uploader_clear_btn button:hover,
+        .st-key-tab3_uploader_clear_btn button:hover {
             background-color: #FCA5A5 !important;
             color: #7A1712 !important;
+        }
+        /* Nút xoá dạng icon tròn nhỏ (giống nút "x" xoá tất cả của multiselect) —
+           dùng cho nút xoá khung mẫu và nút xoá tất cả file đã upload */
+        .st-key-delete_template_btn button,
+        .st-key-tab2_uploader_clear_btn button,
+        .st-key-tab3_uploader_clear_btn button {
+            border-radius: 50% !important;
+            width: 2.6rem !important;
+            height: 2.6rem !important;
+            min-width: 2.6rem !important;
+            padding: 0 !important;
         }
     </style>
     """
@@ -218,14 +233,14 @@ def _file_uploader_with_clear(label: str, key_prefix: str):
     st.session_state.setdefault(reset_key, 0)
     uploader_key = f"{key_prefix}_{st.session_state[reset_key]}"
 
-    col_upload, col_clear = st.columns([4, 1], vertical_alignment="bottom")
+    col_upload, col_clear = st.columns([10, 1], vertical_alignment="bottom")
     with col_upload:
         files = st.file_uploader(label, type=["py"], accept_multiple_files=True, key=uploader_key)
     with col_clear:
         if files:
             if st.button(
-                f"Xoá tất cả ({len(files)})", icon=":material/close:", key=f"{key_prefix}_clear_btn",
-                use_container_width=True,
+                " ", icon=":material/close:", key=f"{key_prefix}_clear_btn",
+                help=f"Xoá tất cả {len(files)} file đã chọn", use_container_width=True,
             ):
                 st.session_state[reset_key] += 1
                 st.rerun()
@@ -423,12 +438,21 @@ def page_templates():
 
     st.subheader("Chọn / tạo đề bài", icon=":material/description:", divider="gray")
     existing = list_templates()
-    choice = st.selectbox(
-        "Chọn đề có sẵn để sửa (hoặc để trống để tạo mới)", [""] + existing, key="template_choice",
-    )
-    default_template = load_template(choice) if choice else {}
-
+    col_choice, col_delete = st.columns([10, 1], vertical_alignment="bottom")
+    with col_choice:
+        choice = st.selectbox(
+            "Chọn đề có sẵn để sửa (hoặc để trống để tạo mới)", [""] + existing, key="template_choice",
+        )
     tc_state_key = f"tc_data_{choice or 'new'}"
+    with col_delete:
+        if choice:
+            if st.button(
+                " ", icon=":material/delete:", key="delete_template_btn",
+                help=f"Xoá vĩnh viễn khung mẫu '{choice}'", use_container_width=True,
+            ):
+                _confirm_delete_dialog(choice, tc_state_key)
+
+    default_template = load_template(choice) if choice else {}
     if tc_state_key not in st.session_state:
         st.session_state[tc_state_key] = default_template.get(
             "test_cases", [{"input": "", "expected_output": "", "timeout": 5, "note": ""}]
@@ -437,10 +461,6 @@ def page_templates():
     col_name, col_desc = st.columns([1, 2])
     name_input = col_name.text_input("Tên đề bài (dùng làm tên file lưu)", value=choice)
     description_input = col_desc.text_input("Mô tả ngắn", value=default_template.get("description", ""))
-
-    if choice:
-        if st.button("Xoá khung mẫu này", icon=":material/delete:", key="delete_template_btn"):
-            _confirm_delete_dialog(choice, tc_state_key)
 
     with st.container(border=True):
         st.markdown("**:material/checklist: Yêu cầu cấu trúc code (tuỳ chọn)**")

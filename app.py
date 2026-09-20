@@ -92,12 +92,8 @@ st.html(
         div.st-key-delete_confirm_btn button,
         div.st-key-tab2_uploader_clear_btn button,
         div.st-key-tab3_uploader_clear_btn button {
-            background-color: #FEF2F2 !important;
-            color: #EF4444 !important;
-            border: 1px solid #FECACA !important;
             border-radius: 8px !important;
             transition: all 0.2s ease !important;
-            box-shadow: none !important;
             width: 2.2rem !important;
             height: 2.2rem !important;
             min-width: 2.2rem !important;
@@ -130,7 +126,6 @@ st.html(
         div.st-key-delete_confirm_btn button span,
         div.st-key-tab2_uploader_clear_btn button span,
         div.st-key-tab3_uploader_clear_btn button span {
-            color: #EF4444 !important;
             margin: 0 !important;
             padding: 0 !important;
             line-height: 1 !important;
@@ -140,8 +135,8 @@ st.html(
         div.st-key-delete_confirm_btn button:hover,
         div.st-key-tab2_uploader_clear_btn button:hover,
         div.st-key-tab3_uploader_clear_btn button:hover {
-            background-color: #FEE2E2 !important;
-            border-color: #FCA5A5 !important;
+            background-color: #FEF2F2 !important;
+            border-color: #FECACA !important;
             transform: translateY(-1px);
             box-shadow: 0 4px 6px -1px rgba(239, 68, 68, 0.15) !important;
         }
@@ -160,14 +155,20 @@ st.html(
             align-items: center !important;
         }
 
-        /* ====== UPLOAD BUTTON — hover xanh lá nhạt ====== */
-        [data-testid="stFileUploader"] button:hover {
+        /* ====== UPLOAD BUTTON & GEN BUTTON — hover xanh lá nhạt ====== */
+        [data-testid="stFileUploader"] button:hover,
+        div.st-key-gen_program_btn button:hover,
+        div.st-key-gen_function_btn button:hover {
             background-color: #F0FDF4 !important;
             border-color: #86EFAC !important;
             color: #16A34A !important;
         }
         [data-testid="stFileUploader"] button:hover span,
-        [data-testid="stFileUploader"] button:hover p {
+        [data-testid="stFileUploader"] button:hover p,
+        div.st-key-gen_program_btn button:hover span,
+        div.st-key-gen_program_btn button:hover p,
+        div.st-key-gen_function_btn button:hover span,
+        div.st-key-gen_function_btn button:hover p {
             color: #16A34A !important;
         }
     </style>

@@ -105,8 +105,8 @@ st.html(
         /* Nút xoá — Tinh tế, mềm mại và chuyên nghiệp hơn */
         .st-key-delete_template_btn button,
         .st-key-delete_confirm_btn button,
-        .st-key-tab2_uploader_clear_btn button,
-        .st-key-tab3_uploader_clear_btn button {
+        .st-key-tab2_clear_btn button,
+        .st-key-tab3_clear_btn button {
             background-color: #FEF2F2 !important;
             color: #EF4444 !important;
             border: 1px solid #FECACA !important;
@@ -116,18 +116,18 @@ st.html(
         }
         .st-key-delete_template_btn button p,
         .st-key-delete_confirm_btn button p,
-        .st-key-tab2_uploader_clear_btn button p,
-        .st-key-tab3_uploader_clear_btn button p,
+        .st-key-tab2_clear_btn button p,
+        .st-key-tab3_clear_btn button p,
         .st-key-delete_template_btn button span,
         .st-key-delete_confirm_btn button span,
-        .st-key-tab2_uploader_clear_btn button span,
-        .st-key-tab3_uploader_clear_btn button span {
+        .st-key-tab2_clear_btn button span,
+        .st-key-tab3_clear_btn button span {
              color: #EF4444 !important;
         }
         .st-key-delete_template_btn button:hover,
         .st-key-delete_confirm_btn button:hover,
-        .st-key-tab2_uploader_clear_btn button:hover,
-        .st-key-tab3_uploader_clear_btn button:hover {
+        .st-key-tab2_clear_btn button:hover,
+        .st-key-tab3_clear_btn button:hover {
             background-color: #FEE2E2 !important;
             color: #DC2626 !important;
             border-color: #FCA5A5 !important;
@@ -136,23 +136,23 @@ st.html(
         }
         .st-key-delete_template_btn button:hover p,
         .st-key-delete_confirm_btn button:hover p,
-        .st-key-tab2_uploader_clear_btn button:hover p,
-        .st-key-tab3_uploader_clear_btn button:hover p,
+        .st-key-tab2_clear_btn button:hover p,
+        .st-key-tab3_clear_btn button:hover p,
         .st-key-delete_template_btn button:hover span,
         .st-key-delete_confirm_btn button:hover span,
-        .st-key-tab2_uploader_clear_btn button:hover span,
-        .st-key-tab3_uploader_clear_btn button:hover span {
+        .st-key-tab2_clear_btn button:hover span,
+        .st-key-tab3_clear_btn button:hover span {
              color: #DC2626 !important;
         }
         /* Hiệu ứng khi nhấn (active) hoặc focus vào nút xóa -> chuyển sang màu xanh */
         .st-key-delete_template_btn button:active,
         .st-key-delete_confirm_btn button:active,
-        .st-key-tab2_uploader_clear_btn button:active,
-        .st-key-tab3_uploader_clear_btn button:active,
+        .st-key-tab2_clear_btn button:active,
+        .st-key-tab3_clear_btn button:active,
         .st-key-delete_template_btn button:focus,
         .st-key-delete_confirm_btn button:focus,
-        .st-key-tab2_uploader_clear_btn button:focus,
-        .st-key-tab3_uploader_clear_btn button:focus {
+        .st-key-tab2_clear_btn button:focus,
+        .st-key-tab3_clear_btn button:focus {
             background-color: #EFF6FF !important;
             color: #2563EB !important;
             border-color: #BFDBFE !important;
@@ -160,27 +160,27 @@ st.html(
         }
         .st-key-delete_template_btn button:active p,
         .st-key-delete_confirm_btn button:active p,
-        .st-key-tab2_uploader_clear_btn button:active p,
-        .st-key-tab3_uploader_clear_btn button:active p,
+        .st-key-tab2_clear_btn button:active p,
+        .st-key-tab3_clear_btn button:active p,
         .st-key-delete_template_btn button:active span,
         .st-key-delete_confirm_btn button:active span,
-        .st-key-tab2_uploader_clear_btn button:active span,
-        .st-key-tab3_uploader_clear_btn button:active span,
+        .st-key-tab2_clear_btn button:active span,
+        .st-key-tab3_clear_btn button:active span,
         .st-key-delete_template_btn button:focus p,
         .st-key-delete_confirm_btn button:focus p,
-        .st-key-tab2_uploader_clear_btn button:focus p,
-        .st-key-tab3_uploader_clear_btn button:focus p,
+        .st-key-tab2_clear_btn button:focus p,
+        .st-key-tab3_clear_btn button:focus p,
         .st-key-delete_template_btn button:focus span,
         .st-key-delete_confirm_btn button:focus span,
-        .st-key-tab2_uploader_clear_btn button:focus span,
-        .st-key-tab3_uploader_clear_btn button:focus span {
+        .st-key-tab2_clear_btn button:focus span,
+        .st-key-tab3_clear_btn button:focus span {
              color: #2563EB !important;
         }
         
         /* Cân chỉnh lại form icon/chữ của nút xóa nhỏ */
         .st-key-delete_template_btn button,
-        .st-key-tab2_uploader_clear_btn button,
-        .st-key-tab3_uploader_clear_btn button {
+        .st-key-tab2_clear_btn button,
+        .st-key-tab3_clear_btn button {
             width: 2.2rem !important; /* Thu nhỏ nút lại cho cân đối */
             height: 2.2rem !important;
             min-width: 2.2rem !important;
@@ -191,14 +191,14 @@ st.html(
         }
         /* Ẩn thẻ p (chứa khoảng trắng " ") để icon đứng chính giữa tuyệt đối */
         .st-key-delete_template_btn button p,
-        .st-key-tab2_uploader_clear_btn button p,
-        .st-key-tab3_uploader_clear_btn button p {
+        .st-key-tab2_clear_btn button p,
+        .st-key-tab3_clear_btn button p {
             display: none !important;
         }
         /* Đảm bảo mọi thẻ con bên trong đều được flex để căn giữa hoàn toàn */
         .st-key-delete_template_btn button div,
-        .st-key-tab2_uploader_clear_btn button div,
-        .st-key-tab3_uploader_clear_btn button div {
+        .st-key-tab2_clear_btn button div,
+        .st-key-tab3_clear_btn button div {
             display: flex !important;
             justify-content: center !important;
             align-items: center !important;
@@ -210,11 +210,11 @@ st.html(
         }
         /* Loại bỏ khoảng cách (margin) thừa mặc định của icon Streamlit để nó nằm chính giữa */
         .st-key-delete_template_btn button [data-testid="stIconMaterial"],
-        .st-key-tab2_uploader_clear_btn button [data-testid="stIconMaterial"],
-        .st-key-tab3_uploader_clear_btn button [data-testid="stIconMaterial"],
+        .st-key-tab2_clear_btn button [data-testid="stIconMaterial"],
+        .st-key-tab3_clear_btn button [data-testid="stIconMaterial"],
         .st-key-delete_template_btn button span.material-symbols-rounded,
-        .st-key-tab2_uploader_clear_btn button span.material-symbols-rounded,
-        .st-key-tab3_uploader_clear_btn button span.material-symbols-rounded {
+        .st-key-tab2_clear_btn button span.material-symbols-rounded,
+        .st-key-tab3_clear_btn button span.material-symbols-rounded {
             margin: 0 !important;
             padding: 0 !important;
             display: flex !important;
@@ -223,8 +223,8 @@ st.html(
         }
         /* Căn nút ra giữa cột để cân đối với khung upload */
         .st-key-delete_template_btn,
-        .st-key-tab2_uploader_clear_btn,
-        .st-key-tab3_uploader_clear_btn {
+        .st-key-tab2_clear_btn,
+        .st-key-tab3_clear_btn {
             display: flex;
             justify-content: center;
         }

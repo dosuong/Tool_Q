@@ -26,7 +26,7 @@ CONSTRUCT_OPTIONS = ["For", "While", "ListComp", "Recursion"]
 st.html(
     """
     <style>
-        html {font-size: 17px;}
+        html, body, [class*="st-"] { font-size: 18px !important; }
         /* Giảm tối đa khoảng trống thừa ở trên cùng của trang và Sidebar */
         .main .block-container {padding-top: 1.5rem !important; padding-bottom: 3rem !important; max-width: 1200px !important;}
         
@@ -81,6 +81,10 @@ st.html(
             color: #4B5563 !important;
             font-weight: 500 !important;
             text-decoration: none !important;
+            font-size: 1.1rem !important;
+        }
+        [data-testid="stPageLink"] a p, [data-testid="stPageLink"] a span {
+            font-size: 1.1rem !important;
         }
         [data-testid="stPageLink"] a:hover {
             background-color: #DBEAFE !important;
@@ -96,13 +100,24 @@ st.html(
             border: 1px solid #FECACA !important;
             transition: all 0.2s ease !important;
         }
+        div.st-key-delete_template_btn button div,
+        div.st-key-delete_confirm_btn button div,
+        div.st-key-tab2_uploader_clear_btn button div,
+        div.st-key-tab3_uploader_clear_btn button div {
+            display: flex !important;
+            justify-content: center !important;
+            align-items: center !important;
+            width: 100% !important;
+        }
         div.st-key-delete_template_btn button p,
-        div.st-key-delete_template_btn button span,
         div.st-key-delete_confirm_btn button p,
-        div.st-key-delete_confirm_btn button span,
         div.st-key-tab2_uploader_clear_btn button p,
+        div.st-key-tab3_uploader_clear_btn button p {
+            display: none !important;
+        }
+        div.st-key-delete_template_btn button span,
+        div.st-key-delete_confirm_btn button span,
         div.st-key-tab2_uploader_clear_btn button span,
-        div.st-key-tab3_uploader_clear_btn button p,
         div.st-key-tab3_uploader_clear_btn button span {
             color: #EF4444 !important;
         }
@@ -303,7 +318,7 @@ def _file_uploader_with_clear(label: str, key_prefix: str):
     with col_clear:
         if files:
             if st.button(
-                "Xoá", icon=":material/close:", key=f"{key_prefix}_clear_btn",
+                "\u200b", icon=":material/close:", key=f"{key_prefix}_clear_btn",
                 help=f"Xoá tất cả {len(files)} file đã chọn", use_container_width=True,
             ):
                 st.session_state[reset_key] += 1
@@ -511,7 +526,7 @@ def page_templates():
     with col_delete:
         if choice:
             if st.button(
-                "Xoá", icon=":material/delete:", key="delete_template_btn",
+                "\u200b", icon=":material/delete:", key="delete_template_btn",
                 help=f"Xoá vĩnh viễn khung mẫu '{choice}'", use_container_width=True,
             ):
                 _confirm_delete_dialog(choice, tc_state_key)
@@ -862,11 +877,11 @@ with st.sidebar:
             st.markdown(f'''
                 <div style="display:flex;align-items:center;gap:12px;padding:10px 16px;
                     border-radius:8px;background-color:#2563EB;color:#FFFFFF;
-                    font-weight:600;font-size:1rem;line-height:1.5;
+                    font-weight:600;font-size:1.1rem;line-height:1.5;
                     margin:4px 0;cursor:default;user-select:none;">
-                    <span style="font-family:'Material Symbols Rounded';font-size:20px;
+                    <span style="font-family:'Material Symbols Rounded';font-size:24px;
                         color:#FFFFFF;line-height:1;flex-shrink:0;">{icon_name}</span>
-                    <span style="color:#FFFFFF;">{label}</span>
+                    <span style="color:#FFFFFF;font-size:1.1rem;">{label}</span>
                 </div>
             ''', unsafe_allow_html=True)
         else:

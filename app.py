@@ -51,38 +51,79 @@ st.html(
             background: #EEF2FF;
             border-radius: 8px;
         }
-        [data-testid="stSidebarNav"] a[aria-current="page"] {
-            background: #E0E7FF !important;
-            font-weight: 700 !important;
-            border-radius: 8px;
+        /* Sidebar Navigation Styling - Căn giữa và phối màu chuyên nghiệp */
+        [data-testid="stSidebarNav"] ul {
+            display: flex;
+            flex-direction: column;
+            align-items: center; /* Căn giữa vùng chứa */
+        }
+        [data-testid="stSidebarNav"] a {
+            transition: all 0.3s ease !important;
+            border-radius: 12px !important;
+            display: flex !important;
+            justify-content: center !important; /* Căn giữa chữ và icon */
+            align-items: center !important;
+            gap: 10px !important;
+            margin: 6px 16px !important;
+            padding: 12px 20px !important;
+            width: calc(100% - 32px) !important;
+            color: #374151 !important;
+            font-weight: 500 !important;
         }
         [data-testid="stSidebarNav"] a:hover {
-            background: #EEF2FF !important;
-            border-radius: 8px;
+            background: linear-gradient(135deg, #EEF2FF 0%, #E0E7FF 100%) !important;
+            color: #4338CA !important;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
+        }
+        [data-testid="stSidebarNav"] a[aria-current="page"] {
+            background: linear-gradient(135deg, #4F46E5 0%, #6366F1 100%) !important;
+            color: #FFFFFF !important;
+            font-weight: 700 !important;
+            box-shadow: 0 4px 15px rgba(79, 70, 229, 0.4) !important;
+        }
+        [data-testid="stSidebarNav"] a[aria-current="page"] span,
+        [data-testid="stSidebarNav"] a[aria-current="page"] div {
+            color: #FFFFFF !important; /* Đảm bảo icon/text cũng đổi màu */
         }
         [data-testid="stSidebarNav"] a:focus-visible {
-            background: #FFEDD5 !important;
-            border-radius: 8px;
+            background: #F59E0B !important;
+            color: #FFFFFF !important;
+            box-shadow: 0 0 0 4px rgba(245, 158, 11, 0.4) !important;
+            transform: scale(1.02);
         }
 
-        /* Nút xoá — tô đỏ, dùng key= để tạo class .st-key-<key> riêng cho từng nút */
+        /* Nút xoá — tô đỏ rực rỡ, dễ nhận diện */
         .st-key-delete_template_btn button,
         .st-key-delete_confirm_btn button,
         .st-key-tab2_uploader_clear_btn button,
         .st-key-tab3_uploader_clear_btn button {
-            background-color: #FEE2E2 !important;
-            color: #B3261E !important;
-            border: 1px solid #FCA5A5 !important;
+            background-color: #EF4444 !important;
+            color: #FFFFFF !important;
+            border: 1px solid #DC2626 !important;
+            transition: all 0.2s ease !important;
+            box-shadow: 0 2px 5px rgba(239, 68, 68, 0.3) !important;
+        }
+        .st-key-delete_template_btn button p,
+        .st-key-delete_confirm_btn button p,
+        .st-key-tab2_uploader_clear_btn button p,
+        .st-key-tab3_uploader_clear_btn button p,
+        .st-key-delete_template_btn button span,
+        .st-key-delete_confirm_btn button span,
+        .st-key-tab2_uploader_clear_btn button span,
+        .st-key-tab3_uploader_clear_btn button span {
+             color: #FFFFFF !important;
         }
         .st-key-delete_template_btn button:hover,
         .st-key-delete_confirm_btn button:hover,
         .st-key-tab2_uploader_clear_btn button:hover,
         .st-key-tab3_uploader_clear_btn button:hover {
-            background-color: #FCA5A5 !important;
-            color: #7A1712 !important;
+            background-color: #DC2626 !important;
+            color: #FFFFFF !important;
+            transform: scale(1.05);
+            box-shadow: 0 4px 8px rgba(220, 38, 38, 0.4) !important;
         }
-        /* Nút xoá dạng icon tròn nhỏ (giống nút "x" xoá tất cả của multiselect) —
-           dùng cho nút xoá khung mẫu và nút xoá tất cả file đã upload */
+        /* Nút xoá dạng icon tròn nhỏ */
         .st-key-delete_template_btn button,
         .st-key-tab2_uploader_clear_btn button,
         .st-key-tab3_uploader_clear_btn button {

@@ -121,6 +121,38 @@ st.html(
         .st-key-tab3_uploader_clear_btn button:hover span {
              color: #DC2626 !important;
         }
+        /* Hiệu ứng khi nhấn (active) hoặc focus vào nút xóa -> chuyển sang màu xanh */
+        .st-key-delete_template_btn button:active,
+        .st-key-delete_confirm_btn button:active,
+        .st-key-tab2_uploader_clear_btn button:active,
+        .st-key-tab3_uploader_clear_btn button:active,
+        .st-key-delete_template_btn button:focus,
+        .st-key-delete_confirm_btn button:focus,
+        .st-key-tab2_uploader_clear_btn button:focus,
+        .st-key-tab3_uploader_clear_btn button:focus {
+            background-color: #EFF6FF !important;
+            color: #2563EB !important;
+            border-color: #BFDBFE !important;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2) !important;
+        }
+        .st-key-delete_template_btn button:active p,
+        .st-key-delete_confirm_btn button:active p,
+        .st-key-tab2_uploader_clear_btn button:active p,
+        .st-key-tab3_uploader_clear_btn button:active p,
+        .st-key-delete_template_btn button:active span,
+        .st-key-delete_confirm_btn button:active span,
+        .st-key-tab2_uploader_clear_btn button:active span,
+        .st-key-tab3_uploader_clear_btn button:active span,
+        .st-key-delete_template_btn button:focus p,
+        .st-key-delete_confirm_btn button:focus p,
+        .st-key-tab2_uploader_clear_btn button:focus p,
+        .st-key-tab3_uploader_clear_btn button:focus p,
+        .st-key-delete_template_btn button:focus span,
+        .st-key-delete_confirm_btn button:focus span,
+        .st-key-tab2_uploader_clear_btn button:focus span,
+        .st-key-tab3_uploader_clear_btn button:focus span {
+             color: #2563EB !important;
+        }
         
         /* Cân chỉnh lại form icon/chữ của nút xóa nhỏ */
         .st-key-delete_template_btn button,
@@ -140,14 +172,28 @@ st.html(
         .st-key-tab3_uploader_clear_btn button p {
             display: none !important;
         }
+        /* Đảm bảo mọi thẻ con bên trong đều được flex để căn giữa hoàn toàn */
         .st-key-delete_template_btn button div,
         .st-key-tab2_uploader_clear_btn button div,
         .st-key-tab3_uploader_clear_btn button div {
             display: flex !important;
             justify-content: center !important;
             align-items: center !important;
+            width: 100% !important;
+            height: 100% !important;
             margin: 0 !important;
             padding: 0 !important;
+            line-height: 1 !important;
+        }
+        .st-key-delete_template_btn button span,
+        .st-key-tab2_uploader_clear_btn button span,
+        .st-key-tab3_uploader_clear_btn button span {
+            display: inline-flex !important;
+            justify-content: center !important;
+            align-items: center !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            line-height: 1 !important;
         }
         /* Căn nút ra giữa cột để cân đối với khung upload */
         .st-key-delete_template_btn,

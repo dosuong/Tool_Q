@@ -34,10 +34,18 @@ st.html(
         }
         section[data-testid="stSidebar"] {background: #F9FAFB;}
 
-        /* Focus rõ ràng hơn cho mọi phần tử tương tác */
+        /* Focus rõ ràng, tương phản cao — dùng màu cam nổi bật, tách biệt hẳn với
+           màu xanh dùng cho trạng thái "đang chọn"/hover, để không bị lẫn */
         *:focus-visible {
-            outline: 2px solid #2563EB !important;
+            outline: 3px solid #F97316 !important;
             outline-offset: 2px;
+            border-radius: 6px;
+            box-shadow: 0 0 0 5px rgba(249, 115, 22, 0.30) !important;
+        }
+        [data-testid="stExpander"] details > summary:focus-visible {
+            outline: 3px solid #F97316 !important;
+            outline-offset: -2px;
+            box-shadow: 0 0 0 5px rgba(249, 115, 22, 0.30) !important;
         }
         [data-testid="stExpander"] details[open] > summary {
             background: #EEF2FF;
@@ -50,6 +58,10 @@ st.html(
         }
         [data-testid="stSidebarNav"] a:hover {
             background: #EEF2FF !important;
+            border-radius: 8px;
+        }
+        [data-testid="stSidebarNav"] a:focus-visible {
+            background: #FFEDD5 !important;
             border-radius: 8px;
         }
 

@@ -67,6 +67,7 @@ st.html(
         }
         
         /* ====== SIDEBAR NAVIGATION ====== */
+        /* Style cho st.page_link (các tab không active) */
         [data-testid="stPageLink"] a {
             transition: all 0.2s ease !important;
             border-radius: 8px !important;
@@ -77,7 +78,7 @@ st.html(
             margin: 4px 0 !important;
             padding: 10px 16px !important;
             width: 100% !important;
-            background-color: transparent;
+            background-color: transparent !important;
             color: #4B5563 !important;
             font-weight: 500 !important;
             text-decoration: none !important;
@@ -86,29 +87,29 @@ st.html(
             background-color: #F3F4F6 !important;
             color: #1F2937 !important;
         }
-        /* Active state: Tab đang được chọn — xanh đậm như nút primary.
-           Dùng aria-current="page" (tự động) VÀ aria-disabled="true" (khi disabled=True) */
-        [data-testid="stPageLink"] a[aria-current="page"],
-        [data-testid="stPageLink"] a[aria-disabled="true"] {
-            background-color: #2563EB !important;
+        /* Active tab — render bằng st.markdown nên chỉ cần reset margin cho wrapper */
+        .sidebar-active-link {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 10px 16px;
+            border-radius: 8px;
+            background: #2563EB;
             color: #FFFFFF !important;
-            font-weight: 600 !important;
-            border: none !important;
-            box-shadow: 0 4px 6px -1px rgba(37, 99, 235, 0.2) !important;
-            opacity: 1 !important;
-            pointer-events: none;
+            font-weight: 600;
+            font-size: 1rem;
+            margin: 4px 0;
+            line-height: 1.5;
+            cursor: default;
+            user-select: none;
         }
-        [data-testid="stPageLink"] a[aria-current="page"] span,
-        [data-testid="stPageLink"] a[aria-current="page"] div,
-        [data-testid="stPageLink"] a[aria-current="page"] p,
-        [data-testid="stPageLink"] a[aria-disabled="true"] span,
-        [data-testid="stPageLink"] a[aria-disabled="true"] div,
-        [data-testid="stPageLink"] a[aria-disabled="true"] p {
+        .sidebar-active-link span {
             color: #FFFFFF !important;
+            font-size: 18px;
+            flex-shrink: 0;
         }
 
-        /* ====== NÚT XÓA (đỏ nhạt, chuyên nghiệp) ====== */
-        /* Các key thực tế: delete_template_btn, delete_confirm_btn, tab2_uploader_clear_btn, tab3_uploader_clear_btn */
+        /* ====== NÚT XÓA (dạng icon-only, đỏ nhạt đỏ) ====== */
         .st-key-delete_template_btn button,
         .st-key-delete_confirm_btn button,
         .st-key-tab2_uploader_clear_btn button,
@@ -119,38 +120,7 @@ st.html(
             border-radius: 8px !important;
             transition: all 0.2s ease !important;
             box-shadow: none !important;
-        }
-        .st-key-delete_template_btn button p,
-        .st-key-delete_confirm_btn button p,
-        .st-key-tab2_uploader_clear_btn button p,
-        .st-key-tab3_uploader_clear_btn button p,
-        .st-key-delete_template_btn button span,
-        .st-key-delete_confirm_btn button span,
-        .st-key-tab2_uploader_clear_btn button span,
-        .st-key-tab3_uploader_clear_btn button span {
-             color: #EF4444 !important;
-        }
-        .st-key-delete_template_btn button:hover,
-        .st-key-delete_confirm_btn button:hover,
-        .st-key-tab2_uploader_clear_btn button:hover,
-        .st-key-tab3_uploader_clear_btn button:hover {
-            background-color: #FEE2E2 !important;
-            color: #DC2626 !important;
-            border-color: #FCA5A5 !important;
-            transform: translateY(-1px);
-            box-shadow: 0 4px 6px -1px rgba(239, 68, 68, 0.15) !important;
-        }
-        .st-key-delete_template_btn button:hover span,
-        .st-key-delete_confirm_btn button:hover span,
-        .st-key-tab2_uploader_clear_btn button:hover span,
-        .st-key-tab3_uploader_clear_btn button:hover span {
-             color: #DC2626 !important;
-        }
-
-        /* ====== Nút xóa nhỏ — icon căn giữa tuyệt đối ====== */
-        .st-key-delete_template_btn button,
-        .st-key-tab2_uploader_clear_btn button,
-        .st-key-tab3_uploader_clear_btn button {
+            /* Kích thước cố định để icon nằm giữa */
             width: 2.2rem !important;
             height: 2.2rem !important;
             min-width: 2.2rem !important;
@@ -159,26 +129,57 @@ st.html(
             display: flex !important;
             justify-content: center !important;
             align-items: center !important;
-            overflow: hidden !important;
         }
-        /* Ẩn TOÀN BỘ text/p bên trong, chỉ giữ icon */
-        .st-key-delete_template_btn button > *:not([data-testid="stIconMaterial"]):not(.material-symbols-rounded),
-        .st-key-tab2_uploader_clear_btn button > *:not([data-testid="stIconMaterial"]):not(.material-symbols-rounded),
-        .st-key-tab3_uploader_clear_btn button > *:not([data-testid="stIconMaterial"]):not(.material-symbols-rounded) {
-            display: none !important;
-        }
-        /* Icon chiếm toàn bộ không gian button */
-        .st-key-delete_template_btn button [data-testid="stIconMaterial"],
-        .st-key-tab2_uploader_clear_btn button [data-testid="stIconMaterial"],
-        .st-key-tab3_uploader_clear_btn button [data-testid="stIconMaterial"] {
+        /* Wrapper div bên trong button — căn giữa icon */
+        .st-key-delete_template_btn button div,
+        .st-key-delete_confirm_btn button div,
+        .st-key-tab2_uploader_clear_btn button div,
+        .st-key-tab3_uploader_clear_btn button div {
             display: flex !important;
             justify-content: center !important;
             align-items: center !important;
-            margin: 0 !important;
+            gap: 0 !important;
             padding: 0 !important;
+            margin: 0 !important;
             width: 100% !important;
             height: 100% !important;
+        }
+        /* Ẩn label text (zero-width space trong <p>) */
+        .st-key-delete_template_btn button p,
+        .st-key-delete_confirm_btn button p,
+        .st-key-tab2_uploader_clear_btn button p,
+        .st-key-tab3_uploader_clear_btn button p {
+            display: none !important;
+            width: 0 !important;
+            height: 0 !important;
+            overflow: hidden !important;
+        }
+        /* Icon — màu đỏ và không có margin */
+        .st-key-delete_template_btn button span,
+        .st-key-delete_confirm_btn button span,
+        .st-key-tab2_uploader_clear_btn button span,
+        .st-key-tab3_uploader_clear_btn button span {
+            color: #EF4444 !important;
+            margin: 0 !important;
+            padding: 0 !important;
             line-height: 1 !important;
+            font-size: 1.2rem !important;
+        }
+        /* Hover — đỏ đậm hơn */
+        .st-key-delete_template_btn button:hover,
+        .st-key-delete_confirm_btn button:hover,
+        .st-key-tab2_uploader_clear_btn button:hover,
+        .st-key-tab3_uploader_clear_btn button:hover {
+            background-color: #FEE2E2 !important;
+            border-color: #FCA5A5 !important;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 6px -1px rgba(239, 68, 68, 0.15) !important;
+        }
+        .st-key-delete_template_btn button:hover span,
+        .st-key-delete_confirm_btn button:hover span,
+        .st-key-tab2_uploader_clear_btn button:hover span,
+        .st-key-tab3_uploader_clear_btn button:hover span {
+            color: #DC2626 !important;
         }
         /* Căn nút ra giữa cột */
         .st-key-delete_template_btn,
@@ -894,9 +895,23 @@ pages = [
 current_page = st.navigation(pages, position="hidden")
 
 with st.sidebar:
-    st.page_link(pages[0], label="Quản lý khung mẫu", icon=":material/folder_open:", disabled=(current_page == pages[0]))
-    st.page_link(pages[1], label="Chấm 1 đề", icon=":material/rule:", disabled=(current_page == pages[1]))
-    st.page_link(pages[2], label="Chấm cả kỳ thi", icon=":material/library_books:", disabled=(current_page == pages[2]))
+    active_idx = next((i for i, p in enumerate(pages) if current_page == p), 0)
+    nav_items = [
+        (pages[0], "Quản lý khung mẫu", "folder_open"),
+        (pages[1], "Chấm 1 đề", "rule"),
+        (pages[2], "Chấm cả kỳ thi", "library_books"),
+    ]
+    for i, (page, label, icon_name) in enumerate(nav_items):
+        if i == active_idx:
+            # Tab đang chọn — render HTML thuần để luôn xanh, không phụ thuộc vào CSS Streamlit
+            st.markdown(f'''
+                <div class="sidebar-active-link">
+                    <span class="material-symbols-rounded">{icon_name}</span>
+                    <span style="color:#FFFFFF;font-size:1rem;">{label}</span>
+                </div>
+            ''', unsafe_allow_html=True)
+        else:
+            st.page_link(page, label=label, icon=f":material/{icon_name}:")
     
     st.divider()
     st.html(f"<div style='font-size: 16px; color: #4B5563;'>Số khung mẫu hiện có: <b style='color: #1F2937;'>{len(list_templates())}</b></div>")

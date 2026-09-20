@@ -34,33 +34,22 @@ st.html(
         }
         section[data-testid="stSidebar"] {background: #F9FAFB;}
 
-        /* Focus rõ ràng, tương phản cao — dùng màu cam nổi bật, tách biệt hẳn với
-           màu xanh dùng cho trạng thái "đang chọn"/hover, để không bị lẫn */
-        *:focus-visible {
-            outline: 3px solid #F97316 !important;
-            outline-offset: 2px;
-            border-radius: 6px;
-            box-shadow: 0 0 0 5px rgba(249, 115, 22, 0.30) !important;
-        }
-        [data-testid="stExpander"] details > summary:focus-visible {
-            outline: 3px solid #F97316 !important;
-            outline-offset: -2px;
-            box-shadow: 0 0 0 5px rgba(249, 115, 22, 0.30) !important;
-        }
+        /* Focus mặc định của Streamlit đã ổn, bỏ đi các viền cam/đổ bóng lố */
         [data-testid="stExpander"] details[open] > summary {
             background: #EEF2FF;
             border-radius: 8px;
         }
+        
         /* Sidebar Navigation Styling - Dành cho st.page_link */
         [data-testid="stPageLink"] a {
-            transition: all 0.3s ease !important;
-            border-radius: 12px !important;
+            transition: all 0.2s ease !important;
+            border-radius: 8px !important;
             display: flex !important;
-            justify-content: center !important; /* Căn giữa chữ và icon */
+            justify-content: flex-start !important; /* Căn trái */
             align-items: center !important;
-            gap: 10px !important;
-            margin: 6px 0 !important;
-            padding: 12px 20px !important;
+            gap: 12px !important; /* Khoảng cách đều đặn giữa icon và chữ */
+            margin: 4px 0 !important;
+            padding: 10px 16px !important;
             width: 100% !important;
             background-color: transparent;
             color: #4B5563 !important;
@@ -68,31 +57,22 @@ st.html(
             text-decoration: none !important;
         }
         [data-testid="stPageLink"] a:hover {
-            background: linear-gradient(135deg, #EEF2FF 0%, #E0E7FF 100%) !important;
-            color: #4338CA !important;
-            transform: translateY(-2px);
-            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
+            background-color: #F3F4F6 !important; /* Xám rất nhẹ khi hover */
+            color: #1F2937 !important;
         }
-        /* st.page_link tự thêm data-active="true" hoặc aria-current="page" (tuỳ version Streamlit),
-           ta bao phủ cả 2 trường hợp */
+        /* Active state: Màu xanh nhạt nhẹ nhàng, tương tự nút xóa màu đỏ nhạt */
         [data-testid="stPageLink"] a[aria-current="page"],
         [data-testid="stPageLink"] a[data-active="true"] {
-            background: linear-gradient(135deg, #4F46E5 0%, #6366F1 100%) !important;
-            color: #FFFFFF !important;
-            font-weight: 700 !important;
-            box-shadow: 0 4px 15px rgba(79, 70, 229, 0.4) !important;
+            background-color: #EFF6FF !important; /* Xanh nhạt */
+            color: #2563EB !important; /* Xanh dương đậm */
+            font-weight: 600 !important;
+            border: 1px solid #BFDBFE !important; /* Viền mỏng mờ */
         }
         [data-testid="stPageLink"] a[aria-current="page"] span,
         [data-testid="stPageLink"] a[aria-current="page"] div,
         [data-testid="stPageLink"] a[data-active="true"] span,
         [data-testid="stPageLink"] a[data-active="true"] div {
-            color: #FFFFFF !important; /* Đảm bảo icon/text cũng đổi màu */
-        }
-        [data-testid="stPageLink"] a:focus-visible {
-            background: #F59E0B !important;
-            color: #FFFFFF !important;
-            box-shadow: 0 0 0 4px rgba(245, 158, 11, 0.4) !important;
-            transform: scale(1.02);
+            color: #2563EB !important; /* Đảm bảo icon/text cùng màu xanh */
         }
 
         /* Nút xoá — Tinh tế, mềm mại và chuyên nghiệp hơn */
@@ -142,13 +122,19 @@ st.html(
         .st-key-delete_template_btn button,
         .st-key-tab2_uploader_clear_btn button,
         .st-key-tab3_uploader_clear_btn button {
-            width: 2.6rem !important;
-            height: 2.6rem !important;
-            min-width: 2.6rem !important;
+            width: 2.2rem !important; /* Thu nhỏ nút lại cho cân đối */
+            height: 2.2rem !important;
+            min-width: 2.2rem !important;
             padding: 0 !important;
             display: inline-flex !important;
             justify-content: center !important;
             align-items: center !important;
+        }
+        /* Ẩn thẻ p (chứa khoảng trắng " ") để icon đứng chính giữa tuyệt đối */
+        .st-key-delete_template_btn button p,
+        .st-key-tab2_uploader_clear_btn button p,
+        .st-key-tab3_uploader_clear_btn button p {
+            display: none !important;
         }
         .st-key-delete_template_btn button div,
         .st-key-tab2_uploader_clear_btn button div,
@@ -158,6 +144,13 @@ st.html(
             align-items: center !important;
             margin: 0 !important;
             padding: 0 !important;
+        }
+        /* Căn nút ra giữa cột để cân đối với khung upload */
+        .st-key-delete_template_btn,
+        .st-key-tab2_uploader_clear_btn,
+        .st-key-tab3_uploader_clear_btn {
+            display: flex;
+            justify-content: center;
         }
     </style>
     """
@@ -852,9 +845,17 @@ def page_exam():
         _render_results(*st.session_state["tab3_results"], key_prefix="tab3")
 
 with st.sidebar:
-    st.subheader("Tool_Q", icon=":material/fact_check:")
-    st.caption("Chấm bài lập trình Python tự động cho giáo viên.")
-    st.write("") # Thêm chút khoảng trống
+    st.html(
+        """
+        <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 8px;">
+            <span class="material-symbols-rounded" style="font-size: 32px; font-weight: 600; color: #1F2937;">fact_check</span>
+            <h2 style="margin: 0; padding: 0; font-size: 30px; font-weight: 800; color: #1F2937; letter-spacing: -0.5px;">Tool_Q</h2>
+        </div>
+        <p style="font-size: 17px; color: #4B5563; line-height: 1.5; margin: 0 0 20px 0;">
+            Chấm bài lập trình Python tự động cho giáo viên.
+        </p>
+        """
+    )
 
 pages = [
     st.Page(page_templates, title="Quản lý khung mẫu", icon=":material/folder_open:", default=True),
@@ -870,6 +871,6 @@ with st.sidebar:
     st.page_link(pages[2], label="Chấm cả kỳ thi", icon=":material/library_books:")
     
     st.divider()
-    st.caption(f"Số khung mẫu hiện có: **{len(list_templates())}**")
+    st.html(f"<div style='font-size: 16px; color: #4B5563;'>Số khung mẫu hiện có: <b style='color: #1F2937;'>{len(list_templates())}</b></div>")
 
 current_page.run()

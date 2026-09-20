@@ -23,9 +23,12 @@ st.set_page_config(
 TEST_RUNNER_FILE = Path(__file__).parent / "grader" / "test_runner.py"
 CONSTRUCT_OPTIONS = ["For", "While", "ListComp", "Recursion"]
 
-st.html(
+st.markdown(
     """
     <style>
+        /* Ẩn div rỗng do st.markdown/st.html tạo ra ở đầu trang */
+        div[data-testid="stMarkdownContainer"]:empty { display: none !important; }
+        .element-container:has(> style) { display: none !important; }
         html, body { font-size: 18px !important; }
         /* Giữ nguyên kích thước tiêu đề như trước khi tăng base size */
         div[data-testid="stMarkdownContainer"] > h1, h1 { font-size: 36px !important; }
@@ -165,7 +168,8 @@ st.html(
             color: #16A34A !important;
         }
     </style>
-    """
+    """,
+    unsafe_allow_html=True
 )
 
 st.title("Tool_Q — Chấm bài Python tự động", icon=":material/fact_check:")

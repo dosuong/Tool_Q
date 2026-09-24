@@ -104,26 +104,41 @@ def page_exam_results(teacher_id: int):
     table_rows = []
     for r in rows:
         row = {"Học sinh": r["student_name"], "Tài khoản": r["student_code"]}
+        
+        # Tính số câu đúng tuyệt đối
+        num_correct = 0
+        total_problems = len(r["per_problem"])
         for pp in r["per_problem"]:
-            row[pp["title"]] = f"{pp['score']:.2f}" if pp["score"] is not None else "—"
-        row["Tổng điểm"] = f"{r['total_score']:.2f}"
+            if pp["score"] is not None and abs(pp["score"] - pp["max_score"]) < 1e-6:
+                num_correct += 1
+                
+        row["Số câu đúng"] = f"{num_correct}/{total_problems}"
+        row["Tổng điểm"] = round(r['total_score'], 2)  # Lưu số để Excel hiểu
+        
+        for pp in r["per_problem"]:
+            row[pp["title"]] = round(pp['score'], 2) if pp["score"] is not None else 0.0
+            
         table_rows.append(row)
+        
     df = pd.DataFrame(table_rows)
     st.dataframe(df, use_container_width=True, hide_index=True)
 
     c1, c2, c3 = st.columns(3)
     
-    # 1. Bảng điểm CSV (Summary)
-    csv_bytes = df.to_csv(index=False).encode("utf-8-sig")
+    # 1. Bảng điểm tổng quát (Excel)
+    buf_summary = io.BytesIO()
+    with pd.ExcelWriter(buf_summary, engine="openpyxl") as writer:
+        df.to_excel(writer, index=False, sheet_name="TongHop")
     c1.download_button(
-        "Tải bảng điểm (CSV)", data=csv_bytes, file_name="bang_diem_tong_hop.csv", mime="text/csv",
+        "Tải kết quả tổng quát (Excel)", data=buf_summary.getvalue(), file_name="bang_diem_tong_quat.xlsx",
+        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         icon=":material/download:", use_container_width=True,
     )
     
     # 2. Chi tiết lỗi (Excel)
     excel_bytes = _build_detailed_excel_bytes(rows)
     c2.download_button(
-        "Tải chi tiết lỗi từng câu (Excel)", data=excel_bytes, file_name="chi_tiet_loi_tung_cau.xlsx",
+        "Tải kết quả chi tiết lỗi (Excel)", data=excel_bytes, file_name="chi_tiet_loi_tung_cau.xlsx",
         mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         icon=":material/bug_report:", use_container_width=True,
     )
@@ -132,7 +147,7 @@ def page_exam_results(teacher_id: int):
     zip_bytes = _build_results_zip(rows)
     if zip_bytes:
         c3.download_button(
-            "Tải ZIP bài làm gốc", data=zip_bytes, file_name="bai_lam_hoc_sinh.zip",
+            "Tải bài làm (ZIP)", data=zip_bytes, file_name="bai_lam_hoc_sinh.zip",
             mime="application/zip", icon=":material/folder_zip:", use_container_width=True,
         )
 

@@ -56,9 +56,26 @@ def _exam_status_label(exam) -> str:
 
 
 def render_student_flow():
+    # 1. Thử khôi phục session từ URL (để học sinh F5 không bị mất session)
+    if not st.session_state.get(f"{_STATE_PREFIX}student_id"):
+        token = st.query_params.get("student_session")
+        if token:
+            student = student_auth.verify_student_token(token)
+            if student:
+                st.session_state[f"{_STATE_PREFIX}student_id"] = student.id
+                st.session_state[f"{_STATE_PREFIX}class_id"] = student.class_id
+                st.session_state[f"{_STATE_PREFIX}full_name"] = student.full_name
+                st.session_state[f"{_STATE_PREFIX}token"] = token
+                
+    # 2. Ghim token vào URL liên tục để giữ session khi F5
+    if st.session_state.get(f"{_STATE_PREFIX}student_id") and st.session_state.get(f"{_STATE_PREFIX}token"):
+        if st.query_params.get("student_session") != st.session_state[f"{_STATE_PREFIX}token"]:
+            st.query_params["student_session"] = st.session_state[f"{_STATE_PREFIX}token"]
+
     if not st.session_state.get(f"{_STATE_PREFIX}student_id"):
         _render_student_login()
         return
+        
     if st.session_state.get(f"{_STATE_PREFIX}active_exam_id"):
         _render_take_exam(st.session_state[f"{_STATE_PREFIX}active_exam_id"])
     else:
@@ -89,6 +106,12 @@ def _render_student_login():
                         st.session_state[f"{_STATE_PREFIX}student_id"] = student.id
                         st.session_state[f"{_STATE_PREFIX}class_id"] = student.class_id
                         st.session_state[f"{_STATE_PREFIX}full_name"] = student.full_name
+                        
+                        # Generate and save token
+                        token = student_auth.generate_student_token(student)
+                        st.session_state[f"{_STATE_PREFIX}token"] = token
+                        st.query_params["student_session"] = token
+                        
                         st.rerun()
 
             if st.button("← Tôi là giáo viên", key="se_back_to_teacher_btn", use_container_width=True):
@@ -107,6 +130,8 @@ def _render_scoreboard():
     top1.title(f"Bảng điểm của tôi — {class_name}", icon=":material/leaderboard:")
     if top2.button("Thoát", icon=":material/logout:", key="se_exit_btn", use_container_width=True):
         _reset_student_state()
+        if "student_session" in st.query_params:
+            del st.query_params["student_session"]
         st.rerun()
     st.caption(full_name)
 

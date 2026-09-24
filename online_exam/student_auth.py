@@ -40,3 +40,37 @@ def authenticate_student(username: str, password: str) -> Student | None:
         if student and auth.verify_password(password or "", student.password_hash):
             return student
         return None
+
+import hmac
+import hashlib
+import base64
+
+def generate_student_token(student: Student) -> str:
+    """Sinh token phiên làm việc stateless dựa trên ID và password_hash của học sinh."""
+    payload = str(student.id).encode("utf-8")
+    key = student.password_hash.encode("utf-8")
+    sig = hmac.new(key, payload, hashlib.sha256).digest()
+    sig_b64 = base64.urlsafe_b64encode(sig).decode("utf-8").rstrip("=")
+    return f"{student.id}.{sig_b64}"
+
+def verify_student_token(token: str) -> Student | None:
+    """Xác thực token và trả về object Student, nếu mật khẩu bị đổi thì token cũ tự vô hiệu."""
+    if not token or "." not in token:
+        return None
+    try:
+        student_id_str, sig_b64 = token.split(".", 1)
+        student_id = int(student_id_str)
+    except Exception:
+        return None
+        
+    with get_session() as session:
+        student = session.get(Student, student_id)
+        if not student or student.is_archived:
+            return None
+        payload = str(student.id).encode("utf-8")
+        key = student.password_hash.encode("utf-8")
+        expected_sig = hmac.new(key, payload, hashlib.sha256).digest()
+        expected_b64 = base64.urlsafe_b64encode(expected_sig).decode("utf-8").rstrip("=")
+        if hmac.compare_digest(sig_b64, expected_b64):
+            return student
+    return None

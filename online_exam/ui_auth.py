@@ -17,8 +17,6 @@ def _cookie_controller() -> CookieController:
 def try_restore_session():
     """Gọi ở đầu app.py mỗi lượt chạy — nếu chưa có teacher_id trong session_state
     (vd sau khi mở tab mới/F5 mất session), thử khôi phục từ cookie hoặc URL."""
-    if st.session_state.get("teacher_id"):
-        return
     
     token = None
     # 1. Lấy từ URL (Chắc chắn 100% hoạt động trên Streamlit Cloud kể cả khi bị chặn Cookie)
@@ -37,8 +35,13 @@ def try_restore_session():
         teacher_id = auth.verify_remember_token(token)
         if teacher_id:
             st.session_state["teacher_id"] = teacher_id
-            # Lưu lại vào URL để F5 không bị mất
-            st.query_params["session"] = token
+            st.session_state["_session_token"] = token
+
+    # GHIM TOKEN VÀO URL: Khi chuyển trang, Streamlit sẽ xoá query_params. 
+    # Đoạn này đảm bảo URL luôn có ?session=... ở mọi trang để F5 không bao giờ chết.
+    if "teacher_id" in st.session_state and "_session_token" in st.session_state:
+        if st.query_params.get("session") != st.session_state["_session_token"]:
+            st.query_params["session"] = st.session_state["_session_token"]
 
 
 def logout():
@@ -49,6 +52,7 @@ def logout():
     if "session" in st.query_params:
         del st.query_params["session"]
     st.session_state.pop("teacher_id", None)
+    st.session_state.pop("_session_token", None)
     st.rerun()
 
 
@@ -84,6 +88,7 @@ def render_login_page():
                             _cookie_controller().set(COOKIE_NAME, token)
                             # Lưu vào URL để bypass lỗi iframe chặn cookie trên Streamlit Cloud
                             st.query_params["session"] = token
+                            st.session_state["_session_token"] = token
                             import time
                             time.sleep(0.5)  # Đợi cookie kịp ghi vào trình duyệt trước khi rerun
                         st.rerun()

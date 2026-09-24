@@ -38,10 +38,12 @@ def _render_bulk_import(class_id: int, teacher_id: int):
 
     with st.expander("Tạo nhiều học sinh cùng lúc từ file Excel", icon=":material/upload_file:"):
         st.caption(
-            "File Excel cần 2 cột **STT** và **Họ Tên HS** (dòng đầu là tiêu đề cột) — "
+            "File Excel cần các cột **STT**, **Họ**, **Tên**, **Ngày sinh** (dòng đầu là tiêu đề cột) — "
             "tải file mẫu bên dưới để đúng định dạng."
         )
-        sample_bytes = _df_to_excel_bytes(pd.DataFrame({"STT": [1, 2], "Họ Tên HS": ["Nguyễn Văn A", "Trần Thị B"]}))
+        sample_bytes = _df_to_excel_bytes(pd.DataFrame({
+            "STT": [1, 2], "Họ": ["Nguyễn Văn", "Trần Thị"], "Tên": ["An", "Bình"], "Ngày sinh": ["01/01/2005", "15/06/2006"]
+        }))
         st.download_button(
             "Tải file mẫu (Excel)", data=sample_bytes, file_name="mau_danh_sach_hoc_sinh.xlsx",
             mime=_EXCEL_MIME, key=f"bulk_sample_dl_{class_id}",
@@ -61,29 +63,55 @@ def _render_bulk_import(class_id: int, teacher_id: int):
                 st.error(f"Không đọc được file Excel: {e}")
             else:
                 cols_normalized = {str(c).strip().lower(): c for c in df_in.columns}
-                name_col = (
-                    cols_normalized.get("họ tên hs") or cols_normalized.get("họ và tên hs")
-                    or cols_normalized.get("họ tên") or cols_normalized.get("họ và tên")
-                )
                 stt_col = cols_normalized.get("stt")
-                if name_col is None:
+                ho_col = cols_normalized.get("họ")
+                ten_col = cols_normalized.get("tên")
+                dob_col = cols_normalized.get("ngày sinh")
+                
+                if not ho_col or not ten_col or not dob_col:
                     st.error(
-                        "File cần có cột 'Họ Tên HS' (dòng đầu là tiêu đề cột) — tải file mẫu ở trên để đúng định dạng."
+                        "File cần có đủ các cột 'Họ', 'Tên', 'Ngày sinh' (dòng đầu là tiêu đề cột) — tải file mẫu ở trên để đúng định dạng."
                     )
                 else:
+                    import unicodedata
                     rows_out = []
                     for idx, row in df_in.iterrows():
-                        full_name = str(row[name_col]).strip()
-                        if not full_name or full_name.lower() == "nan":
+                        ho = str(row[ho_col]).strip()
+                        ten = str(row[ten_col]).strip()
+                        if not ten or ten.lower() == "nan":
                             continue
-                        student, raw_password = service.create_student(teacher_id, class_id, full_name)
+                            
+                        # Ghép họ tên
+                        ho = ho if ho.lower() != "nan" else ""
+                        full_name = f"{ho} {ten}".strip()
+                        
+                        # Xử lý ngày sinh ra chuỗi ddmmyyyy
+                        dob_raw = row[dob_col]
+                        if isinstance(dob_raw, pd.Timestamp):
+                            dob_str = dob_raw.strftime("%d%m%Y")
+                        else:
+                            dob_str = str(dob_raw).replace("/", "").replace("-", "").strip()
+                            if dob_str.lower() == "nan":
+                                dob_str = ""
+                                
+                        # Sinh username
                         stt_val = row[stt_col] if stt_col else idx + 1
+                        
+                        # Xử lý tên không dấu
+                        nfkd = unicodedata.normalize('NFKD', ten)
+                        ten_no_accent = "".join([c for c in nfkd if not unicodedata.combining(c)]).lower()
+                        ten_no_accent = ten_no_accent.replace("đ", "d").replace(" ", "")
+                        
+                        custom_user = f"{stt_val}{ten_no_accent}{dob_str}"
+                        
+                        student, raw_password = service.create_student(teacher_id, class_id, full_name, custom_username=custom_user)
+                        
                         rows_out.append({
                             "STT": stt_val, "Họ Tên HS": full_name,
                             "Tài khoản": student.username, "Mật khẩu": raw_password,
                         })
                     if not rows_out:
-                        st.warning("Không có dòng hợp lệ nào trong file (cột Họ Tên HS trống hết).", icon=":material/warning:")
+                        st.warning("Không có dòng hợp lệ nào trong file (cột Tên trống hết).", icon=":material/warning:")
                     else:
                         st.session_state[result_key] = _df_to_excel_bytes(pd.DataFrame(rows_out))
                         st.session_state[f"_bulk_upload_count_{class_id}"] = len(rows_out)

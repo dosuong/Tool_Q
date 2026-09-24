@@ -414,7 +414,7 @@ def _update_problems_in_place(session, exam_id: int, existing_problems: list[Exa
 # GV tự tạo/reset tài khoản cho từng HS trong lớp (username/password sinh ngẫu nhiên) —
 # thay cho việc HS tự gõ tên/MSHS không kiểm chứng ở thiết kế trước đó.
 
-def create_student(teacher_id: int, class_id: int, full_name: str) -> tuple[Student, str]:
+def create_student(teacher_id: int, class_id: int, full_name: str, custom_username: str | None = None) -> tuple[Student, str]:
     """Trả về (student, raw_password) — raw_password chỉ có ở lần tạo này, GV phải copy/in
     ra ngay vì sau đó chỉ còn lưu bcrypt hash, không xem lại được."""
     room = get_class(class_id, teacher_id)
@@ -422,7 +422,20 @@ def create_student(teacher_id: int, class_id: int, full_name: str) -> tuple[Stud
         raise ValueError("Không tìm thấy lớp hoặc không có quyền.")
     raw_password = student_auth.generate_password()
     with get_session() as session:
-        username = student_auth.generate_username(session)
+        if custom_username:
+            # Kiểm tra trùng lặp nếu dùng username tuỳ chỉnh
+            exists = session.execute(select(Student.id).where(Student.username == custom_username)).scalar_one_or_none()
+            if exists:
+                # Nếu trùng, thêm vài ký tự ngẫu nhiên vào đuôi
+                import random
+                import string
+                suffix = "".join(random.choices(string.ascii_lowercase + string.digits, k=3))
+                username = f"{custom_username}{suffix}"
+            else:
+                username = custom_username
+        else:
+            username = student_auth.generate_username(session)
+            
         student = Student(
             class_id=class_id, username=username,
             password_hash=auth.hash_password(raw_password), full_name=full_name.strip(),

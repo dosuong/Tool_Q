@@ -5,7 +5,7 @@ bật chạy song song (pytest-xdist), các worker process được spawn riêng
 KHÔNG nhận được plugin instance truyền qua tham số `plugins=` của tiến trình
 chính — chúng chỉ tự nạp file conftest.py thật sự nằm trên đĩa. Dữ liệu test case
 được ghi ra 1 file JSON tạm, đường dẫn truyền qua biến môi trường
-TOOLQ_CASES_FILE — đọc lại ngay bên trong hàm (không cache ở cấp module) để luôn
+PYGRADER_CASES_FILE — đọc lại ngay bên trong hàm (không cache ở cấp module) để luôn
 lấy đúng dữ liệu mới nhất mỗi lần gọi `pytest.main()`, kể cả khi app chạy nhiều
 lượt chấm liên tiếp trong cùng 1 tiến trình Streamlit.
 """
@@ -20,7 +20,7 @@ _TESTCASE_FIELDS = {f.name for f in dataclasses.fields(TestCase)}
 
 
 def _load_cases():
-    path = os.environ.get("TOOLQ_CASES_FILE")
+    path = os.environ.get("PYGRADER_CASES_FILE")
     if not path or not Path(path).exists():
         return [], []
     data = json.loads(Path(path).read_text(encoding="utf-8"))

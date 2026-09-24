@@ -16,7 +16,12 @@ _WRAPPER_PATH = Path(__file__).resolve().parent / "function_wrapper.py"
 
 
 def _build_env():
-    env = os.environ.copy()
+    """Dựng môi trường tối thiểu tường minh cho subprocess chấm bài — KHÔNG copy toàn bộ
+    os.environ. Từ khi có module online_exam kết nối Postgres (connection string nằm trong
+    st.secrets), tiến trình chính có thể mang theo biến môi trường nhạy cảm mà code học sinh
+    (giờ có thể tới từ HS ẩn danh qua web, không chỉ file GV tự kiểm soát) không nên đọc được."""
+    keep = ("PATH", "SYSTEMROOT", "SYSTEMDRIVE", "TEMP", "TMP", "COMSPEC", "WINDIR", "PATHEXT")
+    env = {k: os.environ[k] for k in keep if k in os.environ}
     env["PYTHONIOENCODING"] = "utf-8"
     env["PYTHONUTF8"] = "1"
     return env

@@ -13,169 +13,34 @@ from grader.models import TestCase
 from grader.pytest_plugin import GraderPlugin
 from grader.runner import run_capture_only, run_function_capture_only
 from grader.templates_store import delete_template, list_templates, load_template, save_template
+from online_exam import ui_auth, ui_student_exam, ui_style
+from online_exam.ui_classes import page_manage_classes
+from online_exam.ui_create_exam import page_create_exam
+from online_exam.ui_results import page_exam_results
 
 st.set_page_config(
-    page_title="Tool_Q — Chấm bài Python tự động",
+    page_title="PyGrader — Chấm bài Python tự động",
     page_icon=":material/fact_check:",
     layout="wide",
 )
+ui_style.inject_global_css()
+
+if st.query_params.get("mode") == "student":
+    ui_student_exam.render_student_flow()
+    st.stop()
+
+ui_auth.try_restore_session()
+if not st.session_state.get("teacher_id"):
+    ui_auth.render_login_page()
+    st.stop()
+
+TEACHER_ID = st.session_state["teacher_id"]
 
 TEST_RUNNER_FILE = Path(__file__).parent / "grader" / "test_runner.py"
 CONSTRUCT_OPTIONS = ["For", "While", "ListComp", "Recursion"]
 
-st.markdown(
-    """
-    <style>
-        /* Ẩn div rỗng do st.markdown/st.html tạo ra ở đầu trang */
-        div[data-testid="stMarkdownContainer"]:empty { display: none !important; }
-        .element-container:has(> style) { display: none !important; }
-        html, body { font-size: 18px !important; }
-        /* Giữ nguyên kích thước tiêu đề như trước khi tăng base size */
-        div[data-testid="stMarkdownContainer"] > h1, h1 { font-size: 36px !important; }
-        div[data-testid="stMarkdownContainer"] > h2, h2 { font-size: 28px !important; }
-        div[data-testid="stMarkdownContainer"] > h3, h3 { font-size: 22px !important; }
-        
-        /* Giảm tối đa khoảng trống thừa ở trên cùng của trang và Sidebar */
-        .main .block-container {padding-top: 1.5rem !important; padding-bottom: 3rem !important; max-width: 1200px !important;}
-        
-        [data-testid="stSidebarHeader"] {padding: 1rem 1rem 0 1rem !important;}
-        [data-testid="stSidebarUserContent"] {padding-top: 0 !important;}
-        [data-testid="stSidebarContent"] {padding-top: 0 !important;}
-        
-        header[data-testid="stHeader"] {height: 3rem !important;}
-        [data-testid="stHeader"] > div {padding-top: 0.5rem !important;}
-        
-        /* Phóng to và tạo kiểu cho Tool_Q header và caption ở sidebar */
-        [data-testid="stSidebar"] h3 {
-            font-size: 24px !important;
-            font-weight: 800 !important;
-            color: #1F2937 !important;
-            margin-bottom: 5px !important;
-        }
-        [data-testid="stSidebar"] h3 span.material-symbols-rounded {
-            font-size: 26px !important;
-            margin-right: 5px !important;
-        }
-        [data-testid="stSidebar"] [data-testid="stCaptionContainer"] {
-            font-size: 17px !important;
-            color: #4B5563 !important;
-            line-height: 1.5 !important;
-            margin-bottom: 20px !important;
-        }
+st.title("PyGrader — Chấm bài Python tự động", icon=":material/fact_check:")
 
-        div[data-testid="stMetric"] {
-            background: #F9FAFB; border: 1px solid #E5E7EB; border-radius: 10px;
-            padding: 0.7rem 1rem;
-        }
-        section[data-testid="stSidebar"] {background: #F9FAFB;}
-
-        [data-testid="stExpander"] details[open] > summary {
-            background: #EEF2FF;
-            border-radius: 8px;
-        }
-        
-        /* ====== SIDEBAR NAVIGATION ====== */
-        [data-testid="stPageLink"] a {
-            transition: all 0.2s ease !important;
-            border-radius: 8px !important;
-            display: flex !important;
-            justify-content: flex-start !important;
-            align-items: center !important;
-            gap: 12px !important;
-            margin: 4px 0 !important;
-            padding: 10px 16px !important;
-            width: 100% !important;
-            background-color: transparent !important;
-            color: #4B5563 !important;
-            font-weight: 500 !important;
-            text-decoration: none !important;
-            font-size: 1rem !important;
-        }
-        [data-testid="stPageLink"] a p, [data-testid="stPageLink"] a span {
-            font-size: 1rem !important;
-        }
-        [data-testid="stPageLink"] a:hover {
-            background-color: #DBEAFE !important;
-            color: #2563EB !important;
-        }
-
-        /* ====== NÚT XÓA (mặc định đỏ nhạt, hover đỏ đậm) ====== */
-        div.st-key-delete_template_btn button,
-        div.st-key-delete_confirm_btn button,
-        div.st-key-tab2_uploader_clear_btn button,
-        div.st-key-tab3_uploader_clear_btn button {
-            background-color: #FEF2F2 !important;
-            border: 1px solid #FECACA !important;
-            transition: all 0.2s ease !important;
-        }
-        /* Bắt buộc dùng `button > div` để chỉ tác động vào lớp bọc ngoài cùng, 
-           tránh ép độ dài 100% lên lớp bọc chữ bên trong làm đẩy icon ra rìa */
-        div.st-key-delete_template_btn button > div,
-        div.st-key-delete_confirm_btn button > div,
-        div.st-key-tab2_uploader_clear_btn button > div,
-        div.st-key-tab3_uploader_clear_btn button > div {
-            display: flex !important;
-            justify-content: center !important;
-            align-items: center !important;
-            gap: 0 !important;
-        }
-        div.st-key-delete_template_btn button p,
-        div.st-key-delete_confirm_btn button p,
-        div.st-key-tab2_uploader_clear_btn button p,
-        div.st-key-tab3_uploader_clear_btn button p {
-            display: none !important;
-        }
-        div.st-key-delete_template_btn button span,
-        div.st-key-delete_confirm_btn button span,
-        div.st-key-tab2_uploader_clear_btn button span,
-        div.st-key-tab3_uploader_clear_btn button span {
-            color: #EF4444 !important;
-        }
-        
-        div.st-key-delete_template_btn button:hover,
-        div.st-key-delete_confirm_btn button:hover,
-        div.st-key-tab2_uploader_clear_btn button:hover,
-        div.st-key-tab3_uploader_clear_btn button:hover {
-            background-color: #FEE2E2 !important;
-            border-color: #FCA5A5 !important;
-            transform: translateY(-1px);
-            box-shadow: 0 4px 6px -1px rgba(239, 68, 68, 0.15) !important;
-        }
-        div.st-key-delete_template_btn button:hover span,
-        div.st-key-delete_template_btn button:hover p,
-        div.st-key-delete_confirm_btn button:hover span,
-        div.st-key-delete_confirm_btn button:hover p,
-        div.st-key-tab2_uploader_clear_btn button:hover span,
-        div.st-key-tab2_uploader_clear_btn button:hover p,
-        div.st-key-tab3_uploader_clear_btn button:hover span,
-        div.st-key-tab3_uploader_clear_btn button:hover p {
-            color: #DC2626 !important;
-        }
-
-
-        /* ====== UPLOAD BUTTON & GEN BUTTON — hover xanh lá nhạt ====== */
-        [data-testid="stFileUploader"] button:hover,
-        div.st-key-gen_program_btn button:hover,
-        div.st-key-gen_function_btn button:hover {
-            background-color: #F0FDF4 !important;
-            border-color: #86EFAC !important;
-            color: #16A34A !important;
-        }
-        [data-testid="stFileUploader"] button:hover span,
-        [data-testid="stFileUploader"] button:hover p,
-        div.st-key-gen_program_btn button:hover span,
-        div.st-key-gen_program_btn button:hover p,
-        div.st-key-gen_function_btn button:hover span,
-        div.st-key-gen_function_btn button:hover p {
-            color: #16A34A !important;
-        }
-    </style>
-    """,
-    unsafe_allow_html=True
-)
-
-st.title("Tool_Q — Chấm bài Python tự động", icon=":material/fact_check:")
-st.caption("So khớp output · Kiểm tra cấu trúc code (AST) · Chấm hàng loạt bằng pytest")
 
 if "_deleted_template_name" in st.session_state:
     st.toast(f"Đã xoá khung mẫu '{st.session_state.pop('_deleted_template_name')}'.", icon=":material/delete:")
@@ -278,7 +143,7 @@ def _run_grading(output_cases, structure_cases, parallel: bool, workers: int):
     plugin.set_progress_callback(_cb)
 
     payload = _serialize_cases(output_cases, structure_cases)
-    fd, cases_file = tempfile.mkstemp(suffix=".json", prefix="toolq_cases_")
+    fd, cases_file = tempfile.mkstemp(suffix=".json", prefix="pygrader_cases_")
     with os.fdopen(fd, "w", encoding="utf-8") as f:
         json.dump(payload, f, ensure_ascii=False)
 
@@ -286,16 +151,16 @@ def _run_grading(output_cases, structure_cases, parallel: bool, workers: int):
     if parallel:
         args += ["-n", str(workers)]
 
-    old_env = os.environ.get("TOOLQ_CASES_FILE")
-    os.environ["TOOLQ_CASES_FILE"] = cases_file
+    old_env = os.environ.get("PYGRADER_CASES_FILE")
+    os.environ["PYGRADER_CASES_FILE"] = cases_file
     try:
         with st.spinner("pytest đang chạy..."):
             pytest.main(args, plugins=[plugin])
     finally:
         if old_env is None:
-            os.environ.pop("TOOLQ_CASES_FILE", None)
+            os.environ.pop("PYGRADER_CASES_FILE", None)
         else:
-            os.environ["TOOLQ_CASES_FILE"] = old_env
+            os.environ["PYGRADER_CASES_FILE"] = old_env
         try:
             os.unlink(cases_file)
         except OSError:
@@ -355,7 +220,7 @@ def _build_template_data(name_input, description_input, function_name_input, req
 
 def _save_and_sync(name_input: str, data: dict, tc_state_key: str) -> str:
     """Lưu khung mẫu, dọn state cũ, đồng bộ lựa chọn — dùng chung cho nút Lưu và tự-lưu sau khi sinh đáp án."""
-    saved_name = save_template(name_input, data)
+    saved_name = save_template(name_input, data, TEACHER_ID)
     st.session_state.pop(tc_state_key, None)
     st.session_state["pending_template_choice"] = saved_name
     st.session_state["editor_version"] += 1
@@ -391,7 +256,7 @@ def _confirm_delete_dialog(choice: str, tc_state_key: str):
     if col2.button(
         "Xoá vĩnh viễn", icon=":material/delete_forever:", use_container_width=True, key="delete_confirm_btn",
     ):
-        delete_template(choice)
+        delete_template(choice, TEACHER_ID)
         st.session_state.pop(tc_state_key, None)
         st.session_state["pending_template_choice"] = ""
         st.session_state["editor_version"] += 1
@@ -527,7 +392,7 @@ def page_templates():
         st.session_state["template_choice"] = st.session_state.pop("pending_template_choice")
 
     st.subheader("Chọn / tạo đề bài", icon=":material/description:", divider="gray")
-    existing = list_templates()
+    existing = list_templates(TEACHER_ID)
     col_choice, col_delete = st.columns([10, 1], vertical_alignment="bottom")
     with col_choice:
         choice = st.selectbox(
@@ -542,14 +407,14 @@ def page_templates():
             ):
                 _confirm_delete_dialog(choice, tc_state_key)
 
-    default_template = load_template(choice) if choice else {}
+    default_template = load_template(choice, TEACHER_ID) if choice else {}
     if tc_state_key not in st.session_state:
         st.session_state[tc_state_key] = default_template.get(
             "test_cases", [{"input": "", "expected_output": "", "timeout": 5, "note": ""}]
         )
 
     col_name, col_desc = st.columns([1, 2])
-    name_input = col_name.text_input("Tên đề bài (dùng làm tên file lưu)", value=choice)
+    name_input = col_name.text_input(ui_style.required_label("Tên đề bài (dùng làm tên file lưu)"), value=choice)
     description_input = col_desc.text_input("Mô tả ngắn", value=default_template.get("description", ""))
 
     with st.container(border=True):
@@ -775,13 +640,13 @@ def page_templates():
 
 def page_grade_one():
     st.subheader("Chấm bài cho 1 đề", icon=":material/rule:", divider="gray")
-    templates = list_templates()
+    templates = list_templates(TEACHER_ID)
     if not templates:
         st.info("Chưa có khung mẫu nào — hãy tạo ở trang 'Quản lý khung mẫu' trước.", icon=":material/info:")
         return
 
     selected = st.selectbox("Chọn đề bài", templates, key="tab2_template")
-    template = load_template(selected)
+    template = load_template(selected, TEACHER_ID)
     if template.get("description"):
         st.caption(template["description"])
 
@@ -806,7 +671,7 @@ def page_grade_one():
 
 def page_exam():
     st.subheader("Chấm cả kỳ thi (nhiều đề cùng lúc)", icon=":material/library_books:", divider="gray")
-    templates = list_templates()
+    templates = list_templates(TEACHER_ID)
     if not templates:
         st.info("Chưa có khung mẫu nào — hãy tạo ở trang 'Quản lý khung mẫu' trước.", icon=":material/info:")
         return
@@ -848,7 +713,7 @@ def page_exam():
                 if not tname:
                     st.warning(f"Không có đề nào được gán cho 'bai{bai_num}' — bỏ qua {len(files)} file.")
                     continue
-                tmpl = load_template(tname)
+                tmpl = load_template(tname, TEACHER_ID)
                 oc, sc = _build_cases_for_template(tmpl, files, bai_label=f"Bài {bai_num}")
                 all_output_cases += oc
                 all_structure_cases += sc
@@ -864,13 +729,16 @@ def page_exam():
 
 with st.sidebar:
     st.markdown("<div id='custom-sidebar-header'></div>", unsafe_allow_html=True)
-    st.subheader("Tool_Q", icon=":material/fact_check:")
+    st.subheader("PyGrader", icon=":material/fact_check:")
     st.caption("Chấm bài lập trình Python tự động cho giáo viên.")
 
 pages = [
     st.Page(page_templates, title="Quản lý khung mẫu", icon=":material/folder_open:", default=True),
     st.Page(page_grade_one, title="Chấm 1 đề", icon=":material/rule:"),
     st.Page(page_exam, title="Chấm cả kỳ thi", icon=":material/library_books:"),
+    st.Page(lambda: page_manage_classes(TEACHER_ID), title="Quản lý lớp", icon=":material/groups:", url_path="quan-ly-lop"),
+    st.Page(lambda: page_create_exam(TEACHER_ID), title="Tạo bài kiểm tra online", icon=":material/edit_document:", url_path="tao-bai-kiem-tra"),
+    st.Page(lambda: page_exam_results(TEACHER_ID), title="Kết quả bài kiểm tra online", icon=":material/leaderboard:", url_path="ket-qua-thi"),
 ]
 # Ẩn thanh điều hướng mặc định để tự vẽ bằng st.page_link
 current_page = st.navigation(pages, position="hidden")
@@ -881,6 +749,9 @@ with st.sidebar:
         (pages[0], "Quản lý khung mẫu", "folder_open"),
         (pages[1], "Chấm 1 đề", "rule"),
         (pages[2], "Chấm cả kỳ thi", "library_books"),
+        (pages[3], "Quản lý lớp", "groups"),
+        (pages[4], "Tạo bài kiểm tra online", "edit_document"),
+        (pages[5], "Kết quả bài kiểm tra online", "leaderboard"),
     ]
     for i, (page, label, icon_name) in enumerate(nav_items):
         if i == active_idx:
@@ -899,6 +770,8 @@ with st.sidebar:
             st.page_link(page, label=label, icon=f":material/{icon_name}:")
     
     st.divider()
-    st.html(f"<div style='font-size: 16px; color: #4B5563;'>Số khung mẫu hiện có: <b style='color: #1F2937;'>{len(list_templates())}</b></div>")
+    st.html(f"<div style='font-size: 16px; color: #4B5563;'>Số khung mẫu hiện có: <b style='color: #1F2937;'>{len(list_templates(TEACHER_ID))}</b></div>")
+    if st.button("Đăng xuất", icon=":material/logout:", key="logout_btn", use_container_width=True):
+        ui_auth.logout()
 
 current_page.run()

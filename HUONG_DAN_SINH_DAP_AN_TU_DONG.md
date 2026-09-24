@@ -432,7 +432,7 @@ def dem_tan_suat(s):
 ```
 call_args: `["aab"]` → `{"a": 2, "b": 1}`
 
-## IX. Dạng bài KHÔNG phù hợp với Tool_Q (giới hạn hiện tại)
+## IX. Dạng bài KHÔNG phù hợp với PyGrader (giới hạn hiện tại)
 
 - **Đọc/ghi file** (`open("input.txt")`...): công cụ chỉ cấp dữ liệu qua `input()`/tham số hàm, không tự tạo sẵn file mẫu trên đĩa cho chương trình đọc — cần đổi đề sang đọc từ `input()` để chấm được.
 - **Có yếu tố ngẫu nhiên** (`random` không `seed` cố định): output không lặp lại giống nhau mỗi lần chạy nên không so khớp được.

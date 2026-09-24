@@ -1,6 +1,6 @@
-# Tool_Q — Tài liệu kiến trúc & kỹ thuật
+# PyGrader — Tài liệu kiến trúc & kỹ thuật
 
-Tài liệu này giải thích **toàn bộ bên trong** của Tool_Q: cấu trúc thư mục, thư viện dùng,
+Tài liệu này giải thích **toàn bộ bên trong** của PyGrader: cấu trúc thư mục, thư viện dùng,
 luồng chạy, các thuật toán lõi, và những điểm kỹ thuật đáng chú ý. Dành cho việc bảo trì/mở
 rộng sau này (kể cả khi người đọc không nhớ chi tiết đã cùng xây dựng lúc trước).
 
@@ -11,12 +11,12 @@ Các file hướng dẫn *sử dụng* (cho giáo viên) nằm ở nơi khác, k
 
 ---
 
-## 1. Tool_Q giải quyết bài toán gì
+## 1. PyGrader giải quyết bài toán gì
 
 Giáo viên tin học ra đề lập trình Python cho học sinh, thu bài `.py` (qua Zalo/Classroom/email…),
 rồi cần chấm hàng chục–hàng trăm file: chạy từng file, so kết quả in ra với đáp án, kiểm tra học
 sinh có dùng đúng vòng lặp/cấu trúc yêu cầu không, và tổng hợp điểm. Làm tay việc này rất tốn thời
-gian và dễ sai sót. Tool_Q tự động hoá toàn bộ quy trình đó thành 3 bước trên giao diện web:
+gian và dễ sai sót. PyGrader tự động hoá toàn bộ quy trình đó thành 3 bước trên giao diện web:
 tạo khung mẫu đề bài → upload bài học sinh → bấm chấm, ra bảng điểm + chi tiết lỗi từng em.
 
 Mô hình triển khai: **không có tài khoản đăng nhập, không phân quyền học sinh** — giáo viên là
@@ -27,7 +27,7 @@ người dùng duy nhất tương tác với app, học sinh không bao giờ tr
 ## 2. Cấu trúc thư mục
 
 ```
-Tool_Q/
+PyGrader/
 ├── app.py                        # Toàn bộ giao diện Streamlit (entry point duy nhất)
 ├── requirements.txt               # streamlit, pytest, pandas, pytest-xdist
 ├── setup.bat / run.bat             # cài đặt 1 lần / chạy app bằng double-click (Windows)
@@ -112,13 +112,13 @@ Ghép mỗi file với test case của đúng khung mẫu
 _serialize_cases(): chuyển Path/dataclass → dict JSON-hoá được
       │
       ▼
-Ghi ra 1 file JSON tạm, đường dẫn đặt vào biến môi trường TOOLQ_CASES_FILE
+Ghi ra 1 file JSON tạm, đường dẫn đặt vào biến môi trường PYGRADER_CASES_FILE
       │
       ▼
 pytest.main(["-q", ..., "grader/test_runner.py", ("-n", workers nếu song song)],
             plugins=[GraderPlugin(...)])
       │
-      ├─ grader/conftest.py: pytest_generate_tests() đọc lại TOOLQ_CASES_FILE,
+      ├─ grader/conftest.py: pytest_generate_tests() đọc lại PYGRADER_CASES_FILE,
       │  parametrize test_runner.py theo đúng số case → mỗi case = 1 "test"
       │
       ├─ grader/test_runner.py chạy từng test:
@@ -215,7 +215,7 @@ Cách sửa: chuyển `pytest_generate_tests` sang một **file `conftest.py` th
 (`grader/conftest.py`) — cơ chế nạp `conftest.py` của pytest áp dụng cho mọi tiến trình, kể cả
 worker. Vì dữ liệu test case (chứa `Path`, `dataclass`) không thể truyền thẳng qua biến môi
 trường, nó được serialize ra JSON (`_serialize_cases` trong `app.py`), ghi vào 1 file tạm, và
-`conftest.py` đọc lại đường dẫn file đó qua biến môi trường `TOOLQ_CASES_FILE` — đọc **mỗi lần
+`conftest.py` đọc lại đường dẫn file đó qua biến môi trường `PYGRADER_CASES_FILE` — đọc **mỗi lần
 `pytest_generate_tests` được gọi**, không cache ở cấp module, để tránh dữ liệu cũ bị dùng lại giữa
 các lượt chấm liên tiếp trong cùng 1 tiến trình Streamlit dài hạn.
 

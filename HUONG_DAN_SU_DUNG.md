@@ -1,4 +1,4 @@
-# Hướng dẫn sử dụng Tool_Q
+# Hướng dẫn sử dụng PyGrader
 
 Công cụ chấm bài lập trình Python tự động cho giáo viên — so khớp output, chấm được cả bài nộp dạng hàm, kiểm tra cấu trúc code, và chấm hàng loạt bằng pytest.
 
@@ -137,7 +137,7 @@ Mặc định chấm tuần tự. Với lớp đông hoặc nhiều đề cùng 
 
 ## 7. Triển khai cho nhiều giáo viên
 
-Mặc định Tool_Q chạy riêng trên máy 1 người. Muốn các GV khác trong trường cùng dùng qua 1 link:
+Mặc định PyGrader chạy riêng trên máy 1 người. Muốn các GV khác trong trường cùng dùng qua 1 link:
 
 1. Đẩy toàn bộ thư mục dự án lên 1 GitHub repository (nên để **riêng tư** vì chứa đề thi).
 2. Vào `share.streamlit.io` → đăng nhập bằng GitHub → chọn repo, chọn file `app.py` → Deploy.

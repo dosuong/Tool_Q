@@ -1,4 +1,4 @@
-# Các dạng đề Tool_Q hỗ trợ — ví dụ khung mẫu sẵn dùng
+# Các dạng đề PyGrader hỗ trợ — ví dụ khung mẫu sẵn dùng
 
 Mỗi mục dưới đây là 1 file JSON hoàn chỉnh — copy nguyên khối, vào tab **"Quản lý khung mẫu" → Nâng cao: xem/nạp JSON trực tiếp**, dán vào ô "Dán 1 JSON khung mẫu khác vào đây rồi bấm Nạp" → bấm **"Nạp JSON vào bảng test case"** → sửa lại tên/mô tả nếu muốn → bấm **Lưu khung mẫu**.
 
@@ -197,6 +197,6 @@ Hàm trả về **list** `[so_lon_nhat, so_lon_thu_k]` — xem lưu ý về tupl
 ## Lưu ý chung khi soạn đề
 
 - **Nhiều test case cho 1 đề**: thêm nhiều dòng trong mảng `test_cases` — điểm sẽ hiện dạng `x/N` (số case đạt / tổng số case).
-- **Bài thuật toán yêu cầu N lớn** (10^5 – 10^6 phần tử) để kiểm tra độ phức tạp thuật toán: Tool_Q hiện **chưa hỗ trợ tự sinh test cỡ lớn** — cần tự chuẩn bị input/expected_output cỡ lớn và dán tay vào JSON (có thể cồng kềnh).
+- **Bài thuật toán yêu cầu N lớn** (10^5 – 10^6 phần tử) để kiểm tra độ phức tạp thuật toán: PyGrader hiện **chưa hỗ trợ tự sinh test cỡ lớn** — cần tự chuẩn bị input/expected_output cỡ lớn và dán tay vào JSON (có thể cồng kềnh).
 - **Chỉ muốn nhận hàm, không nhận chương trình**: vẫn phải điền `input`/`expected_output` cho đủ trường bắt buộc, nhưng có thể để trống `input` — hệ thống sẽ tự fallback sang gọi hàm khi thấy stdout rỗng (xem mục 6.1 trong `HUONG_DAN_SU_DUNG.md`).
 - **Kiểm tra cấu trúc mà không quan tâm output** (hiếm gặp): vẫn cần ít nhất 1 `test_cases` hợp lệ vì đây là trường bắt buộc của khung mẫu.

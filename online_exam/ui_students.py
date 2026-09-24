@@ -164,7 +164,27 @@ def render_student_management(class_id: int, teacher_id: int):
         st.info("Lớp chưa có học sinh nào.", icon=":material/info:")
         return
 
+    search_term = st.text_input("🔍 Tìm kiếm học sinh (theo tên hoặc tài khoản)", key=f"search_student_{class_id}")
+    
+    import unicodedata
+    def _normalize_search(text: str) -> str:
+        if not text:
+            return ""
+        # Remove accents for accent-insensitive search
+        nfkd = unicodedata.normalize('NFKD', text)
+        no_accent = "".join([c for c in nfkd if not unicodedata.combining(c)]).lower()
+        return no_accent.replace("đ", "d")
+        
+    search_norm = _normalize_search(search_term)
+
+    visible_count = 0
     for s in students:
+        if search_norm:
+            name_norm = _normalize_search(s.full_name)
+            if search_norm not in name_norm and search_norm not in s.username.lower():
+                continue
+        
+        visible_count += 1
         with st.container(border=True):
             col_info, col_reset, col_delete = st.columns([3, 1, 1])
             col_info.markdown(f"**{s.full_name}** — tài khoản `{s.username}`")
@@ -181,3 +201,6 @@ def render_student_management(class_id: int, teacher_id: int):
                     f"Mật khẩu mới cho **{s.full_name}** (chỉ hiện 1 lần): `{st.session_state.pop(reset_shown_key)}`",
                     icon=":material/key:",
                 )
+                
+    if visible_count == 0 and search_term:
+        st.info("Không tìm thấy học sinh nào khớp với từ khoá tìm kiếm.", icon=":material/search:")

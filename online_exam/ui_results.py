@@ -32,6 +32,43 @@ def _build_results_zip(rows: list[dict]) -> bytes | None:
     return buf.getvalue() if has_any else None
 
 
+def _build_detailed_excel_bytes(rows: list[dict]) -> bytes:
+    data = []
+    for r in rows:
+        student_name = r["student_name"]
+        username = r["student_code"]
+        for pp in r["per_problem"]:
+            row_dict = {
+                "Học sinh": student_name,
+                "Tài khoản": username,
+                "Bài": pp["title"],
+                "Điểm": pp["score"] if pp["score"] is not None else 0.0,
+                "Lượt nộp": pp["attempts_used"],
+                "Trạng thái": "Chưa nộp",
+                "Lỗi tại Test Case": "",
+                "Chi tiết lỗi": ""
+            }
+            sub_id = pp["best_submission_id"]
+            if sub_id:
+                submission, results = service.get_submission_with_results(sub_id)
+                if submission.passed_ratio == 1.0:
+                    row_dict["Trạng thái"] = "Hoàn thành"
+                else:
+                    row_dict["Trạng thái"] = "Có lỗi"
+                    # Tìm test case lỗi đầu tiên
+                    for idx, res in enumerate(results, start=1):
+                        if not res.passed:
+                            row_dict["Lỗi tại Test Case"] = str(idx)
+                            row_dict["Chi tiết lỗi"] = res.error_message or "Sai kết quả đầu ra (không khớp mong đợi)"
+                            break
+            data.append(row_dict)
+            
+    df_detail = pd.DataFrame(data)
+    buf = io.BytesIO()
+    with pd.ExcelWriter(buf, engine="openpyxl") as writer:
+        df_detail.to_excel(writer, index=False, sheet_name="ChiTietLoi")
+    return buf.getvalue()
+
 def page_exam_results(teacher_id: int):
     st.subheader("Kết quả bài kiểm tra online", icon=":material/leaderboard:", divider="gray")
 
@@ -66,7 +103,7 @@ def page_exam_results(teacher_id: int):
 
     table_rows = []
     for r in rows:
-        row = {"Học sinh": r["student_name"], "MSHS": r["student_code"]}
+        row = {"Học sinh": r["student_name"], "Tài khoản": r["student_code"]}
         for pp in r["per_problem"]:
             row[pp["title"]] = f"{pp['score']:.2f}" if pp["score"] is not None else "—"
         row["Tổng điểm"] = f"{r['total_score']:.2f}"
@@ -74,16 +111,28 @@ def page_exam_results(teacher_id: int):
     df = pd.DataFrame(table_rows)
     st.dataframe(df, use_container_width=True, hide_index=True)
 
-    col_dl1, col_dl2 = st.columns(2)
+    c1, c2, c3 = st.columns(3)
+    
+    # 1. Bảng điểm CSV (Summary)
     csv_bytes = df.to_csv(index=False).encode("utf-8-sig")
-    col_dl1.download_button(
-        "Tải bảng điểm (CSV)", data=csv_bytes, file_name="ket_qua_thi.csv", mime="text/csv",
+    c1.download_button(
+        "Tải bảng điểm (CSV)", data=csv_bytes, file_name="bang_diem_tong_hop.csv", mime="text/csv",
         icon=":material/download:", use_container_width=True,
     )
+    
+    # 2. Chi tiết lỗi (Excel)
+    excel_bytes = _build_detailed_excel_bytes(rows)
+    c2.download_button(
+        "Tải chi tiết lỗi từng câu (Excel)", data=excel_bytes, file_name="chi_tiet_loi_tung_cau.xlsx",
+        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        icon=":material/bug_report:", use_container_width=True,
+    )
+    
+    # 3. ZIP bài làm
     zip_bytes = _build_results_zip(rows)
     if zip_bytes:
-        col_dl2.download_button(
-            "Tải ZIP bài làm (bản tính điểm)", data=zip_bytes, file_name="bai_lam_hoc_sinh.zip",
+        c3.download_button(
+            "Tải ZIP bài làm gốc", data=zip_bytes, file_name="bai_lam_hoc_sinh.zip",
             mime="application/zip", icon=":material/folder_zip:", use_container_width=True,
         )
 

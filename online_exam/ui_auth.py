@@ -74,6 +74,8 @@ def render_login_page():
                         if remember:
                             token = auth.create_remember_token(teacher_id)
                             _cookie_controller().set(COOKIE_NAME, token)
+                            import time
+                            time.sleep(0.5)  # Đợi cookie kịp ghi vào trình duyệt trước khi rerun
                         st.rerun()
 
             if st.button(

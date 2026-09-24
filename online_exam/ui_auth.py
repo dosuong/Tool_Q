@@ -19,7 +19,16 @@ def try_restore_session():
     (vd sau khi mở tab mới/F5 mất session), thử khôi phục từ cookie."""
     if st.session_state.get("teacher_id"):
         return
-    token = _cookie_controller().get(COOKIE_NAME)
+    
+    token = None
+    # Lấy nhanh từ native Streamlit context (hoạt động ngay từ khung hình đầu tiên khi F5)
+    if hasattr(st, "context") and hasattr(st.context, "cookies"):
+        token = st.context.cookies.get(COOKIE_NAME)
+        
+    # Fallback lại bằng component nếu không có
+    if not token:
+        token = _cookie_controller().get(COOKIE_NAME)
+        
     if token:
         teacher_id = auth.verify_remember_token(token)
         if teacher_id:

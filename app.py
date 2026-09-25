@@ -770,7 +770,6 @@ with st.sidebar:
             st.page_link(page, label=label, icon=f":material/{icon_name}:")
     
     st.divider()
-    st.html(f"<div style='font-size: 16px; color: #4B5563;'>Số khung mẫu hiện có: <b style='color: #1F2937;'>{len(list_templates(TEACHER_ID))}</b></div>")
     if st.button("Đăng xuất", icon=":material/logout:", key="logout_btn", use_container_width=True):
         ui_auth.logout()
 

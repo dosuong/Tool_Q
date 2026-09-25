@@ -18,6 +18,13 @@ def try_restore_session():
     """Gọi ở đầu app.py mỗi lượt chạy — nếu chưa có teacher_id trong session_state
     (vd sau khi mở tab mới/F5 mất session), thử khôi phục từ cookie hoặc URL."""
     
+    # TỐI ƯU: Nếu đã đăng nhập, ghim URL rồi thoát luôn để không gọi Database làm chậm web!
+    if "teacher_id" in st.session_state:
+        if "_session_token" in st.session_state:
+            if st.query_params.get("session") != st.session_state["_session_token"]:
+                st.query_params["session"] = st.session_state["_session_token"]
+        return
+        
     token = None
     # 1. Lấy từ URL (Chắc chắn 100% hoạt động trên Streamlit Cloud kể cả khi bị chặn Cookie)
     if "session" in st.query_params:

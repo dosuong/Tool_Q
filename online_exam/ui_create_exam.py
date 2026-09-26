@@ -179,7 +179,6 @@ def page_create_exam(teacher_id: int):
     # giữ lại giá trị cũ (widget key trùng thì tham số value= bị bỏ qua).
     mkey = f"oe_meta_{class_id}_{exam_id or 'new'}"
 
-    @st.fragment
     def _render_exam_meta():
         with st.container(border=True):
             st.markdown("**:material/settings: Thông tin & cấu hình chung**")
@@ -225,12 +224,7 @@ def page_create_exam(teacher_id: int):
     st.subheader("Các câu", icon=":material/checklist:", divider="gray")
     problems_draft = st.session_state[state_key]
 
-    @st.fragment
     def _render_one_problem(i: int):
-        """Mỗi câu là 1 FRAGMENT riêng: gõ/sửa trong Câu 2 chỉ chạy lại code của Câu 2, không
-        vẽ lại cả trang. Mặc định Streamlit chạy lại TOÀN BỘ script ở mọi thao tác widget —
-        với ~16 widget/câu thì trang 3 câu có ~57 widget, nên không tách fragment là mỗi lần
-        gõ phím đều dựng lại toàn bộ 57 widget đó."""
         # Gắn state_key (namespace theo lớp+bài đang sửa) vào MỌI khoá widget của câu này —
         # nếu chỉ đánh số theo i, chuyển từ "tạo mới" sang "sửa bài khác" sẽ bị Streamlit giữ
         # lại giá trị cũ ở đúng vị trí i đó (widget key trùng thì value= bị bỏ qua), gây hiện

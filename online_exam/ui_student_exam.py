@@ -119,6 +119,7 @@ def _render_student_login():
                 st.rerun()
 
 
+@st.fragment
 def _render_scoreboard():
     student_id = st.session_state[f"{_STATE_PREFIX}student_id"]
     class_id = st.session_state[f"{_STATE_PREFIX}class_id"]
@@ -243,17 +244,10 @@ def _render_take_exam(exam_id: int):
     # xem, nên gọi DB riêng từng câu sẽ nhân độ trễ theo số câu mỗi lần HS bấm bất kỳ nút nào.
     progress_map = service.get_or_create_problem_progress_bulk(enrollment.id, [p["id"] for p in problems])
 
-    # Mỗi câu là 1 FRAGMENT: gõ code / bấm nút trong Câu 2 chỉ chạy lại code của Câu 2.
-    # Nếu không tách, Streamlit dựng lại TOÀN BỘ các tab ở mọi thao tác (st.tabs luôn chạy
-    # code của mọi tab, kể cả tab đang ẩn) — với 5 câu là 5 lần dựng editor + bảng test case.
-    @st.fragment
-    def _problem_fragment(i: int, problem: dict, progress):
-        _render_problem_tab(i, exam, enrollment, problem, read_only_all, progress)
-
     tabs = st.tabs([f"Câu {i + 1}" for i in range(len(problems))])
     for i, (tab, problem) in enumerate(zip(tabs, problems)):
         with tab:
-            _problem_fragment(i, problem, progress_map[problem["id"]])
+            _render_problem_tab(i, exam, enrollment, problem, read_only_all, progress_map[problem["id"]])
 
 
 def _is_redundant_title(title: str, index: int) -> bool:
@@ -263,6 +257,7 @@ def _is_redundant_title(title: str, index: int) -> bool:
     return normalized in (f"câu{index + 1}", f"cau{index + 1}")
 
 
+@st.fragment
 def _render_problem_tab(index: int, exam, enrollment, problem: dict, read_only_all: bool, progress):
     header = f"Câu {index + 1}"
     title = problem.get("title", "")

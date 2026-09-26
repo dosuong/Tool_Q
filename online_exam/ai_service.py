@@ -1,23 +1,18 @@
 import os
-from openai import OpenAI
-
-def get_openai_client():
-    api_key = os.environ.get("OPENAI_API_KEY")
-    if not api_key:
-        # Check streamlit secrets as a fallback if not in normal env vars
-        import streamlit as st
-        if "OPENAI_API_KEY" in st.secrets:
-            api_key = st.secrets["OPENAI_API_KEY"]
-    
-    if not api_key:
-        return None
-    return OpenAI(api_key=api_key)
+import google.generativeai as genai
+import streamlit as st
 
 def ask_ai_tutor(problem: dict, student_code: str, chat_history: list, user_message: str) -> str:
-    """Gọi OpenAI API để gợi ý học sinh, ép AI đóng vai gia sư không spoiler đáp án."""
-    client = get_openai_client()
-    if not client:
-        return "Lỗi hệ thống: Chưa cấu hình OPENAI_API_KEY trong file .env hoặc st.secrets."
+    """Gọi Google Gemini API để gợi ý học sinh, ép AI đóng vai gia sư không spoiler đáp án."""
+    api_key = os.environ.get("GEMINI_API_KEY")
+    if not api_key:
+        if "GEMINI_API_KEY" in st.secrets:
+            api_key = st.secrets["GEMINI_API_KEY"]
+    
+    if not api_key:
+        return "Lỗi hệ thống: Chưa cấu hình GEMINI_API_KEY trong file .env hoặc st.secrets."
+
+    genai.configure(api_key=api_key)
 
     system_prompt = f"""Bạn là một gia sư dạy lập trình Python tận tâm.
 Đề bài học sinh đang giải: {problem.get('title')}
@@ -35,21 +30,21 @@ Nhiệm vụ của bạn:
 5. Luôn giữ thái độ động viên, tích cực. Xưng hô là "AI" hoặc "Thầy/Cô" và gọi học sinh là "bạn" hoặc "em".
 """
 
-    messages = [{"role": "system", "content": system_prompt}]
+    model = genai.GenerativeModel(
+        model_name="gemini-1.5-flash",
+        system_instruction=system_prompt
+    )
     
-    # Gắn thêm lịch sử chat
+    # Chuyển đổi lịch sử chat sang định dạng của Gemini (OpenAI dùng 'assistant', Gemini dùng 'model')
+    history = []
     for msg in chat_history:
-        messages.append({"role": msg["role"], "content": msg["content"]})
+        role = "model" if msg["role"] == "assistant" else "user"
+        history.append({"role": role, "parts": [msg["content"]]})
         
-    messages.append({"role": "user", "content": user_message})
+    chat = model.start_chat(history=history)
 
     try:
-        response = client.chat.completions.create(
-            model="gpt-4o-mini", # Dùng gpt-4o-mini tối ưu chi phí và tốc độ
-            messages=messages,
-            temperature=0.7,
-            max_tokens=800
-        )
-        return response.choices[0].message.content
+        response = chat.send_message(user_message)
+        return response.text
     except Exception as e:
         return f"Xin lỗi, có lỗi kết nối tới AI: {str(e)}"

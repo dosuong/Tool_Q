@@ -164,7 +164,9 @@ def render_student_management(class_id: int, teacher_id: int):
         st.info("Lớp chưa có học sinh nào.", icon=":material/info:")
         return
 
-    search_term = st.text_input("🔍 Tìm kiếm học sinh (theo tên hoặc tài khoản)", key=f"search_student_{class_id}")
+    search_term = st.text_input(
+        "Tìm kiếm học sinh (theo tên hoặc tài khoản)", icon=":material/search:", key=f"search_student_{class_id}",
+    )
     
     import unicodedata
     def _normalize_search(text: str) -> str:

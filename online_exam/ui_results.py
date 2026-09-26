@@ -172,10 +172,15 @@ def page_exam_results(teacher_id: int):
                           + (" ⭐ (tính điểm)" if s.id == pp["best_submission_id"] else "")
                     for s in submissions
                 }
+                sub_ids = list(sub_options.keys())
+                # Mặc định mở đúng lần được tính điểm (⭐) thay vì luôn là lần 1 — trước đây
+                # selectbox không có index= nên luôn mặc định phần tử đầu tiên (lần nộp cũ
+                # nhất), khiến GV tưởng nhầm là "nộp lại không cập nhật" dù dữ liệu đã đúng.
+                default_id = pp["best_submission_id"] if pp["best_submission_id"] in sub_ids else sub_ids[-1]
                 sel_key = f"oer_sub_sel_{r['enrollment_id']}_{pp['problem_id']}"
                 chosen_id = st.selectbox(
-                    "Xem lần nộp", options=list(sub_options.keys()), format_func=lambda sid: sub_options[sid],
-                    key=sel_key,
+                    "Xem lần nộp", options=sub_ids, format_func=lambda sid: sub_options[sid],
+                    index=sub_ids.index(default_id), key=sel_key,
                 )
                 chosen = next(s for s in submissions if s.id == chosen_id)
                 st.code(chosen.code_text, language="python")

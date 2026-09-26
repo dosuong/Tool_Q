@@ -601,6 +601,33 @@ def get_or_create_problem_progress(enrollment_id: int, problem_id: int) -> Probl
         return progress
 
 
+def get_or_create_problem_progress_bulk(enrollment_id: int, problem_ids: list[int]) -> dict[int, ProblemProgress]:
+    """Nạp/tạo tiến độ cho NHIỀU câu trong tối đa 2 lượt round-trip DB (1 SELECT + 1 INSERT nếu
+    thiếu), thay vì N lượt riêng lẻ (N = số câu). Quan trọng vì `st.tabs()` của Streamlit chạy
+    lại code của TẤT CẢ các tab ở MỌI lần rerun (không chỉ tab đang xem) — nếu mỗi tab tự gọi
+    get_or_create_problem_progress() riêng, số round-trip DB nhân theo số câu mỗi lần HS bấm
+    bất kỳ nút nào, kể cả ở tab khác. Đây là nguyên nhân chính gây ra độ trễ 1-3s mỗi thao tác
+    khi deploy thật (Streamlit Cloud + Supabase qua mạng, không phải SQLite cục bộ)."""
+    if not problem_ids:
+        return {}
+    with get_session() as session:
+        existing = session.execute(
+            select(ProblemProgress).where(
+                ProblemProgress.enrollment_id == enrollment_id,
+                ProblemProgress.problem_id.in_(problem_ids),
+            )
+        ).scalars().all()
+        progress_map = {p.problem_id: p for p in existing}
+        missing_ids = [pid for pid in problem_ids if pid not in progress_map]
+        if missing_ids:
+            new_rows = [ProblemProgress(enrollment_id=enrollment_id, problem_id=pid) for pid in missing_ids]
+            session.add_all(new_rows)
+            session.commit()  # PK tự tăng đã có sẵn trên object ngay sau INSERT, không cần refresh()
+            for row in new_rows:
+                progress_map[row.problem_id] = row
+        return progress_map
+
+
 def save_draft(problem_progress_id: int, code_text: str):
     with get_session() as session:
         progress = session.get(ProblemProgress, problem_progress_id)
@@ -725,10 +752,14 @@ def record_official_submission(problem_progress_id: int, problem: dict, exam: Ex
             # best_submission_id LUÔN là lần nộp có final_score cao nhất (dùng làm bài tham
             # khảo khi xem lại) — tính bằng truy vấn trực tiếp, không suy ra từ best_score vì
             # dưới policy "average" best_score không còn là điểm của 1 lần nộp cụ thể nào.
+            # QUAN TRỌNG: sắp theo attempt_number DESC làm tiêu chí phụ để phá tie — nếu không,
+            # 2 lần nộp CÙNG điểm (vd nộp lần 1 sai, nộp lại lần 2 vẫn sai giống hệt, cả 2 đều
+            # 0 điểm) có thể khiến DB trả về lần nộp CŨ HƠN, khiến trang Kết quả/HS xem lại cứ
+            # hiện mãi code của lần nộp đầu tiên dù đã nộp lại — đây là bug thật đã gặp.
             best_id, best_individual_score = session.execute(
                 select(Submission.id, Submission.final_score)
                 .where(Submission.problem_progress_id == problem_progress_id, Submission.is_trial.is_(False))
-                .order_by(Submission.final_score.desc())
+                .order_by(Submission.final_score.desc(), Submission.attempt_number.desc())
                 .limit(1)
             ).one()
             progress.best_submission_id = best_id

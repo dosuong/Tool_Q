@@ -237,10 +237,15 @@ def _render_take_exam(exam_id: int):
         st.info("Bài kiểm tra chưa có câu nào.", icon=":material/info:")
         return
 
+    # Nạp tiến độ TẤT CẢ các câu trong 1-2 round-trip DB (không phải N round-trip riêng lẻ)
+    # — bắt buộc vì st.tabs() chạy lại code của MỌI tab ở MỌI lần rerun, không chỉ tab đang
+    # xem, nên gọi DB riêng từng câu sẽ nhân độ trễ theo số câu mỗi lần HS bấm bất kỳ nút nào.
+    progress_map = service.get_or_create_problem_progress_bulk(enrollment.id, [p["id"] for p in problems])
+
     tabs = st.tabs([f"Câu {i + 1}" for i in range(len(problems))])
     for i, (tab, problem) in enumerate(zip(tabs, problems)):
         with tab:
-            _render_problem_tab(i, exam, enrollment, problem, read_only_all)
+            _render_problem_tab(i, exam, enrollment, problem, read_only_all, progress_map[problem["id"]])
 
 
 def _is_redundant_title(title: str, index: int) -> bool:
@@ -250,7 +255,7 @@ def _is_redundant_title(title: str, index: int) -> bool:
     return normalized in (f"câu{index + 1}", f"cau{index + 1}")
 
 
-def _render_problem_tab(index: int, exam, enrollment, problem: dict, read_only_all: bool):
+def _render_problem_tab(index: int, exam, enrollment, problem: dict, read_only_all: bool, progress):
     header = f"Câu {index + 1}"
     title = problem.get("title", "")
     if title and not _is_redundant_title(title, index):
@@ -260,7 +265,6 @@ def _render_problem_tab(index: int, exam, enrollment, problem: dict, read_only_a
         st.markdown(problem["description"])
     st.divider()
 
-    progress = service.get_or_create_problem_progress(enrollment.id, problem["id"])
     sample_tcs = [tc for tc in problem["test_cases"] if tc.get("is_sample")]
     max_attempts = problem.get("max_attempts")
     attempts_left_txt = (
@@ -319,8 +323,14 @@ def _render_problem_tab(index: int, exam, enrollment, problem: dict, read_only_a
         st.info(f"Câu này hiện chỉ xem được ({reason}) — không nộp thêm được.", icon=":material/lock:")
 
     if progress.best_submission_id:
-        with st.expander("Xem bài đã nộp (bản được tính điểm)", icon=":material/history:"):
-            _render_official_review(progress.best_submission_id, problem, sample_tcs)
+        # Lazy: chỉ query DB (2 lượt) khi HS THỰC SỰ mở expander này, không phải mọi lần rerun
+        # — cùng lý do với get_or_create_problem_progress_bulk ở trên, tránh nhân độ trễ theo
+        # số câu vì st.tabs() render lại code của mọi tab dù đang đóng.
+        review_key = f"{pkey}_review_expander"
+        review_expander = st.expander("Xem bài đã nộp (bản được tính điểm)", icon=":material/history:", key=review_key)
+        with review_expander:
+            if st.session_state.get(review_key):
+                _render_official_review(progress.best_submission_id, problem, sample_tcs)
 
 
 def _render_code_input(exam, pkey: str, progress):
@@ -357,6 +367,11 @@ def _render_code_input(exam, pkey: str, progress):
 import html
 
 def _build_results_table_html(test_cases: list[dict], results_by_tc_id: dict) -> str:
+    """CHỈ ĐƯỢC gọi với test case MẪU (is_sample=True) — bảng này hiện chi tiết đầy đủ (mong
+    đợi/thực tế/đạt-hay-không) cho từng dòng, không có cơ chế che giấu. Test ẩn phải được lọc
+    ra TRƯỚC khi gọi hàm này (xem _render_official_review) và chỉ báo tổng số đúng/tổng dạng
+    aggregate — không được đưa test ẩn vào đây dù chỉ để che cột 'Mong đợi', vì cột 'Thực tế'
+    và 'Kết quả' (Đạt/Chưa đạt) vẫn sẽ lộ ra."""
     table_html = """<style>
 .result-table { width: 100%; border-collapse: collapse; margin-bottom: 15px; font-size: 0.95rem; }
 .result-table th, .result-table td { border: 1px solid #e5e7eb; padding: 10px; text-align: left; }
@@ -379,49 +394,38 @@ def _build_results_table_html(test_cases: list[dict], results_by_tc_id: dict) ->
 <tbody>
 """
     
-    # Sắp xếp: test mẫu lên trước, test ẩn xuống cuối
-    sorted_tcs = sorted(test_cases, key=lambda tc: not tc.get("is_sample", False))
-    
-    for i, tc in enumerate(sorted_tcs, start=1):
+    for i, tc in enumerate(test_cases, start=1):
         tc_id = tc.get("id")
         res = results_by_tc_id.get(tc_id)
         if not res:
             continue
-            
+
         passed = res['passed']
-        is_sample = tc.get('is_sample', False)
-        
         row_class = "row-pass" if passed else "row-fail"
         text_class = "text-pass" if passed else "text-fail"
         result_text = "Đạt" if passed else "Chưa đạt"
-        
+
         actual = res.get('actual_output') or ""
         error_msg = res.get('error_message') or ""
         actual_display = actual.strip()
         if not actual_display and error_msg:
             actual_display = f"Lỗi: {error_msg}"
-            
         actual_html = f"<div class='code-font'>{html.escape(actual_display)}</div>"
-        
-        if is_sample:
-            expected_txt = tc.get("expected_output") or (
-                json.dumps(tc.get("expected_return"), ensure_ascii=False)
-                if tc.get("expected_return") is not None else ""
-            )
-            expected_html = f"<div class='code-font'>{html.escape(expected_txt)}</div>"
-            note_str = ""  # Ẩn note của test mẫu theo yêu cầu
-        else:
-            expected_html = "<i style='color: #9ca3af;'>Đã ẩn</i>"
-            note_str = f"<br><span style='font-size: 0.8rem; color: #6b7280;'>Test ẩn</span>"
-        
+
+        expected_txt = tc.get("expected_output") or (
+            json.dumps(tc.get("expected_return"), ensure_ascii=False)
+            if tc.get("expected_return") is not None else ""
+        )
+        expected_html = f"<div class='code-font'>{html.escape(expected_txt)}</div>"
+
         table_html += f"""<tr class="{row_class}">
-<td>{i}{note_str}</td>
+<td>{i}</td>
 <td>{expected_html}</td>
 <td>{actual_html}</td>
 <td class="{text_class}">{result_text}</td>
 </tr>
 """
-        
+
     table_html += "</tbody></table>"
     return table_html
 
@@ -446,17 +450,22 @@ def _render_official_review(submission_id: int, problem: dict, sample_tcs: list[
         return
     st.markdown(f"Điểm: **{float(submission.final_score):.2f} / {problem['max_score']:.2f}**")
 
+    # Test ẩn KHÔNG được đưa vào bảng chi tiết (xem docstring _build_results_table_html) —
+    # chỉ báo tổng số đúng/tổng dạng aggregate, đúng quy tắc đã chốt từ đầu dự án.
+    sample_ids = {tc["id"] for tc in sample_tcs}
     results_by_tc_id = {
-        r.test_case_id: {
-            "passed": r.passed,
-            "actual_output": r.actual_output,
-            "error_message": r.error_message
-        }
-        for r in results
+        r.test_case_id: {"passed": r.passed, "actual_output": r.actual_output, "error_message": r.error_message}
+        for r in results if r.test_case_id in sample_ids
     }
-    
-    html_str = _build_results_table_html(problem["test_cases"], results_by_tc_id)
-    st.markdown(html_str, unsafe_allow_html=True)
+    if sample_tcs:
+        html_str = _build_results_table_html(sample_tcs, results_by_tc_id)
+        st.markdown(html_str, unsafe_allow_html=True)
+
+    hidden_results = [r for r in results if r.test_case_id not in sample_ids]
+    if hidden_results:
+        hidden_pass = sum(1 for r in hidden_results if r.passed)
+        st.info(f"Test ẩn: {hidden_pass}/{len(hidden_results)} đúng (không hiển thị chi tiết).",
+                icon=":material/visibility_off:")
 
     file_name = submission.original_filename or f"{(problem['title'] or 'bai_lam').replace(' ', '_')}.py"
     st.download_button(

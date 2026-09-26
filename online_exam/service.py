@@ -7,6 +7,7 @@ import random
 import string
 from datetime import datetime, timedelta, timezone
 
+import streamlit as st
 from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
 
@@ -16,6 +17,14 @@ from online_exam.db_models import (
     ClassRoom, Enrollment, Exam, ExamProblem, ExamTestCase, ProblemProgress, Student, Submission,
     SubmissionResult,
 )
+
+# Cache các truy vấn CHỈ ĐỌC, ít thay đổi và bị gọi lại ở MỌI lần rerun của Streamlit.
+# Lý do: mỗi get_session() tốn ~3 round-trip tới Supabase (pre_ping + query + rollback khi trả
+# connection về pool) ≈ 280ms khi đo thật, nên 1 trang mở 5 session là ~1.4s cho mỗi lần gõ
+# phím/click — dù người dùng chưa bấm Lưu. Cache xoá tường minh sau mọi thao tác GHI
+# (_clear_read_caches), TTL chỉ là lớp chặn cuối cho thay đổi đến từ nơi khác (tab khác, GV
+# khác, HS vừa nộp bài).
+_READ_CACHE_TTL = 60
 
 
 class SubmissionBlocked(Exception):
@@ -28,6 +37,16 @@ _JOIN_CODE_ALPHABET = "".join(c for c in string.ascii_uppercase + string.digits 
 
 def _utcnow() -> datetime:
     return datetime.now(timezone.utc)
+
+
+def _clear_read_caches():
+    """Gọi sau MỌI thao tác ghi để cache đọc không bị cũ. Cố ý xoá thô toàn bộ (không xoá theo
+    từng khoá) — rẻ và không có nguy cơ sót, vì ghi hiếm hơn đọc rất nhiều."""
+    for cached_fn in (
+        list_classes, list_exams, load_exam_full, load_exam_problems_for_student,
+        list_students, is_exam_locked_for_editing,
+    ):
+        cached_fn.clear()
 
 
 def _generate_join_code(session, length: int = 6) -> str:
@@ -50,9 +69,11 @@ def create_class(teacher_id: int, name: str) -> ClassRoom:
         session.add(room)
         session.commit()
         session.refresh(room)
+        _clear_read_caches()
         return room
 
 
+@st.cache_data(ttl=_READ_CACHE_TTL, show_spinner=False)
 def list_classes(teacher_id: int, include_archived: bool = False) -> list[ClassRoom]:
     with get_session() as session:
         stmt = select(ClassRoom).where(ClassRoom.teacher_id == teacher_id)
@@ -97,6 +118,7 @@ def set_class_active(class_id: int, teacher_id: int, is_active: bool):
         if room:
             room.is_active = is_active
             session.commit()
+            _clear_read_caches()
 
 
 def delete_or_archive_class(class_id: int, teacher_id: int) -> str:
@@ -109,6 +131,7 @@ def delete_or_archive_class(class_id: int, teacher_id: int) -> str:
             if room:
                 room.is_archived = True
                 session.commit()
+        _clear_read_caches()
         return "archived"
     with get_session() as session:
         room = session.execute(
@@ -117,11 +140,13 @@ def delete_or_archive_class(class_id: int, teacher_id: int) -> str:
         if room:
             session.delete(room)
             session.commit()
+    _clear_read_caches()
     return "deleted"
 
 
 # ------------------------------------------------------------ Bài kiểm tra ---
 
+@st.cache_data(ttl=_READ_CACHE_TTL, show_spinner=False)
 def list_exams(teacher_id: int, class_id: int | None = None, include_archived: bool = True) -> list[Exam]:
     """Mặc định BAO GỒM bài đã lưu trữ — dùng cho trang Kết quả (cần tra cứu lại).
     Trang Tạo/sửa bài kiểm tra phải tự truyền include_archived=False để loại bỏ."""
@@ -154,14 +179,28 @@ def exam_has_any_official_submission(exam_id: int) -> bool:
         return session.execute(stmt).scalar_one_or_none() is not None
 
 
+@st.cache_data(ttl=_READ_CACHE_TTL, show_spinner=False)
 def is_exam_locked_for_editing(exam_id: int) -> bool:
     """Khoá sửa câu/test case khi đã có >=1 lần nộp CHÍNH THỨC, TRỪ KHI GV đã bấm
-    'Mở khoá khẩn cấp' (force_unlocked=True) — xem force_unlock_exam_editing()."""
+    'Mở khoá khẩn cấp' (force_unlocked=True) — xem force_unlock_exam_editing().
+
+    Được cache: giá trị này chỉ dùng để HIỂN THỊ (cảnh báo + khoá widget trên form). Tính
+    đúng đắn của dữ liệu KHÔNG phụ thuộc vào nó — save_exam() tự kiểm tra lại khoá bằng truy
+    vấn tươi ngay trong transaction ghi, nên cache cũ (tối đa vài chục giây) không thể khiến
+    sửa nhầm đề đã có bài nộp.
+
+    Gộp 2 truy vấn vào CÙNG 1 session (trước đây mở 2 session = thêm ~280ms round-trip)."""
     with get_session() as session:
         exam = session.get(Exam, exam_id)
         if exam is None or exam.force_unlocked:
             return False
-    return exam_has_any_official_submission(exam_id)
+        return session.execute(
+            select(Submission.id)
+            .join(ProblemProgress, Submission.problem_progress_id == ProblemProgress.id)
+            .join(ExamProblem, ProblemProgress.problem_id == ExamProblem.id)
+            .where(ExamProblem.exam_id == exam_id, Submission.is_trial.is_(False))
+            .limit(1)
+        ).scalar_one_or_none() is not None
 
 
 def force_unlock_exam_editing(exam_id: int, teacher_id: int):
@@ -176,6 +215,7 @@ def force_unlock_exam_editing(exam_id: int, teacher_id: int):
         if exam:
             exam.force_unlocked = True
             session.commit()
+            _clear_read_caches()
 
 
 def set_exam_published(exam_id: int, teacher_id: int, is_published: bool):
@@ -186,6 +226,7 @@ def set_exam_published(exam_id: int, teacher_id: int, is_published: bool):
         if exam:
             exam.is_published = is_published
             session.commit()
+            _clear_read_caches()
 
 
 def delete_or_archive_exam(exam_id: int, teacher_id: int) -> str:
@@ -197,6 +238,7 @@ def delete_or_archive_exam(exam_id: int, teacher_id: int) -> str:
             if exam:
                 exam.is_archived = True
                 session.commit()
+        _clear_read_caches()
         return "archived"
     with get_session() as session:
         exam = session.execute(
@@ -205,6 +247,7 @@ def delete_or_archive_exam(exam_id: int, teacher_id: int) -> str:
         if exam:
             session.delete(exam)
             session.commit()
+    _clear_read_caches()
     return "deleted"
 
 
@@ -248,6 +291,26 @@ def _problem_to_dict(problem: ExamProblem, test_cases: list[ExamTestCase]) -> di
     }
 
 
+def _load_problems_with_test_cases(session, exam_id: int) -> list[dict]:
+    """Nạp các câu + test case bằng ĐÚNG 2 truy vấn (trước đây là 1 + 1-truy-vấn-mỗi-câu, tức
+    N+1 — với 5 câu là 6 truy vấn, mỗi truy vấn ~74ms qua mạng tới Supabase)."""
+    problems = session.execute(
+        select(ExamProblem).where(ExamProblem.exam_id == exam_id).order_by(ExamProblem.order_index)
+    ).scalars().all()
+    if not problems:
+        return []
+    test_cases = session.execute(
+        select(ExamTestCase)
+        .where(ExamTestCase.problem_id.in_([p.id for p in problems]))
+        .order_by(ExamTestCase.order_index)
+    ).scalars().all()
+    by_problem: dict[int, list[ExamTestCase]] = {}
+    for tc in test_cases:
+        by_problem.setdefault(tc.problem_id, []).append(tc)
+    return [_problem_to_dict(p, by_problem.get(p.id, [])) for p in problems]
+
+
+@st.cache_data(ttl=_READ_CACHE_TTL, show_spinner=False)
 def load_exam_full(exam_id: int, teacher_id: int) -> dict | None:
     """Nạp toàn bộ bài kiểm tra + các câu + test case thành 1 dict lồng nhau, tiện cho UI."""
     with get_session() as session:
@@ -256,15 +319,7 @@ def load_exam_full(exam_id: int, teacher_id: int) -> dict | None:
         ).scalar_one_or_none()
         if exam is None:
             return None
-        problems = session.execute(
-            select(ExamProblem).where(ExamProblem.exam_id == exam_id).order_by(ExamProblem.order_index)
-        ).scalars().all()
-        problem_dicts = []
-        for p in problems:
-            tcs = session.execute(
-                select(ExamTestCase).where(ExamTestCase.problem_id == p.id).order_by(ExamTestCase.order_index)
-            ).scalars().all()
-            problem_dicts.append(_problem_to_dict(p, tcs))
+        problem_dicts = _load_problems_with_test_cases(session, exam_id)
         return {
             "id": exam.id,
             "class_id": exam.class_id,
@@ -347,6 +402,7 @@ def save_exam(teacher_id: int, class_id: int, exam_meta: dict, problems: list[di
                 _insert_problems(session, exam.id, problems)
 
         session.commit()
+        _clear_read_caches()
         return exam.id
 
 
@@ -443,9 +499,11 @@ def create_student(teacher_id: int, class_id: int, full_name: str, custom_userna
         session.add(student)
         session.commit()
         session.refresh(student)
+        _clear_read_caches()
         return student, raw_password
 
 
+@st.cache_data(ttl=_READ_CACHE_TTL, show_spinner=False)
 def list_students(class_id: int, teacher_id: int, include_archived: bool = False) -> list[Student]:
     room = get_class(class_id, teacher_id)
     if room is None:
@@ -483,9 +541,11 @@ def delete_or_archive_student(student_id: int, teacher_id: int) -> str:
         if student_has_any_submission(student_id):
             student.is_archived = True
             session.commit()
+            _clear_read_caches()
             return "archived"
         session.delete(student)
         session.commit()
+        _clear_read_caches()
         return "deleted"
 
 
@@ -501,6 +561,7 @@ def reset_student_password(student_id: int, teacher_id: int) -> str:
             raise ValueError("Không tìm thấy học sinh hoặc không có quyền.")
         student.password_hash = auth.hash_password(raw_password)
         session.commit()
+    _clear_read_caches()
     return raw_password
 
 
@@ -566,6 +627,7 @@ def create_enrollment(exam_id: int, student_id: int) -> Enrollment:
         return enrollment
 
 
+@st.cache_data(ttl=_READ_CACHE_TTL, show_spinner=False)
 def load_exam_problems_for_student(exam_id: int) -> list[dict]:
     """Giống load_exam_full() nhưng KHÔNG lọc theo teacher_id — chỉ gọi được sau khi exam_id
     đã được xác thực qua get_exam_for_student()/enrollment. Lưu ý: dict trả về CÓ chứa
@@ -573,16 +635,7 @@ def load_exam_problems_for_student(exam_id: int) -> list[dict]:
     liệu ở phía SERVER (session_state), nơi gọi (ui_student_exam.py) chịu trách nhiệm KHÔNG
     render các trường này ra màn hình cho câu có is_sample=False."""
     with get_session() as session:
-        problems = session.execute(
-            select(ExamProblem).where(ExamProblem.exam_id == exam_id).order_by(ExamProblem.order_index)
-        ).scalars().all()
-        result = []
-        for p in problems:
-            tcs = session.execute(
-                select(ExamTestCase).where(ExamTestCase.problem_id == p.id).order_by(ExamTestCase.order_index)
-            ).scalars().all()
-            result.append(_problem_to_dict(p, tcs))
-        return result
+        return _load_problems_with_test_cases(session, exam_id)
 
 
 def get_or_create_problem_progress(enrollment_id: int, problem_id: int) -> ProblemProgress:
@@ -783,6 +836,9 @@ def record_official_submission(problem_progress_id: int, problem: dict, exam: Ex
                 "Có một yêu cầu nộp khác cho câu này vừa xử lý cùng lúc — vui lòng thử lại."
             )
         session.refresh(submission)
+        # Lần nộp CHÍNH THỨC đầu tiên làm bài kiểm tra chuyển sang trạng thái bị khoá sửa —
+        # phải xoá cache để GV thấy cảnh báo khoá ngay, không đợi hết TTL.
+        is_exam_locked_for_editing.clear()
         return submission
 
 

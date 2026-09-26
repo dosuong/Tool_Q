@@ -170,12 +170,18 @@ def page_create_exam(teacher_id: int):
 
     can_add_remove = not locked and not force_unlocked
 
-    col1, col2 = st.columns(2)
-    title = col1.text_input(ui_style.required_label("Tiêu đề bài kiểm tra"), value=(exam_data or {}).get("title", ""))
-    description = col2.text_input("Mô tả ngắn", value=(exam_data or {}).get("description", ""))
+    # Toàn bộ phần thông tin chung nằm trong 1 st.form: gõ/tick trong đây KHÔNG gây rerun,
+    # chỉ khi bấm nút Lưu mới chạy lại 1 lần duy nhất. Nút Lưu bắt buộc phải nằm TRONG form
+    # (là form_submit_button) — nếu để nút Lưu bên ngoài, giá trị đang gõ dở trong form chưa
+    # được ghi nhận và sẽ bị mất im lặng.
+    with st.form("oe_exam_meta_form", border=True):
+        st.markdown("**:material/settings: Thông tin & cấu hình chung**")
+        col1, col2 = st.columns(2)
+        title = col1.text_input(
+            ui_style.required_label("Tiêu đề bài kiểm tra"), value=(exam_data or {}).get("title", ""),
+        )
+        description = col2.text_input("Mô tả ngắn", value=(exam_data or {}).get("description", ""))
 
-    with st.container(border=True):
-        st.markdown("**:material/settings: Cấu hình chung**")
         c1, c2, c3 = st.columns(3)
         allow_editor = c1.checkbox("Cho phép code editor", value=(exam_data or {}).get("allow_code_editor", True))
         allow_upload = c2.checkbox("Cho phép upload file", value=(exam_data or {}).get("allow_file_upload", True))
@@ -196,16 +202,29 @@ def page_create_exam(teacher_id: int):
             "Mật khẩu riêng cho bài kiểm tra (tuỳ chọn)", value=(exam_data or {}).get("access_code") or "",
             help="Để trống nếu chỉ cần mã lớp là làm được luôn.",
         )
+        st.caption("Nút này lưu **cả** thông tin chung ở trên **lẫn** toàn bộ các câu bên dưới.")
+        save_clicked = st.form_submit_button(
+            "Lưu bài kiểm tra", type="primary", icon=":material/save:", use_container_width=True,
+        )
 
     st.subheader("Các câu", icon=":material/checklist:", divider="gray")
     problems_draft = st.session_state[state_key]
-    ver = st.session_state["oe_editor_version"]
 
-    for i, problem in enumerate(problems_draft):
+    @st.fragment
+    def _render_one_problem(i: int):
+        """Mỗi câu là 1 FRAGMENT riêng: gõ/sửa trong Câu 2 chỉ chạy lại code của Câu 2, không
+        vẽ lại cả trang. Mặc định Streamlit chạy lại TOÀN BỘ script ở mọi thao tác widget —
+        với ~16 widget/câu thì trang 3 câu có ~57 widget, nên không tách fragment là mỗi lần
+        gõ phím đều dựng lại toàn bộ 57 widget đó."""
         # Gắn state_key (namespace theo lớp+bài đang sửa) vào MỌI khoá widget của câu này —
         # nếu chỉ đánh số theo i, chuyển từ "tạo mới" sang "sửa bài khác" sẽ bị Streamlit giữ
         # lại giá trị cũ ở đúng vị trí i đó (widget key trùng thì value= bị bỏ qua), gây hiện
         # tượng ô đầu tiên hiển thị sai dữ liệu khi mở lại 1 bài đã lưu.
+        problems_draft = st.session_state[state_key]
+        if i >= len(problems_draft):
+            return  # câu vừa bị xoá ở nơi khác, fragment này đã cũ
+        problem = problems_draft[i]
+        ver = st.session_state["oe_editor_version"]
         pkey = f"{state_key}_{i}"
         with st.container(border=True):
             header_col, remove_col = st.columns([5, 1])
@@ -399,6 +418,9 @@ def page_create_exam(teacher_id: int):
                 "test_cases": current_test_cases,
             }
 
+    for _i in range(len(problems_draft)):
+        _render_one_problem(_i)
+
     if can_add_remove:
         if st.button("Thêm câu", icon=":material/add:", key="oe_add_problem_btn"):
             problems_draft.append(_new_problem())
@@ -406,8 +428,9 @@ def page_create_exam(teacher_id: int):
             st.rerun()
 
     st.divider()
-    col_save1, col_save2 = st.columns(2)
-    if col_save1.button("Lưu nháp", icon=":material/save:", key="oe_save_draft_btn", use_container_width=True):
+    # Nút bấm nằm trong form ở trên, nhưng XỬ LÝ đặt ở đây — chạy sau khi các fragment của
+    # từng câu đã ghi giá trị mới nhất vào problems_draft trong cùng lượt chạy này.
+    if save_clicked:
         if not title.strip():
             st.error("Nhập tiêu đề bài kiểm tra.")
         elif not any(p["title"].strip() for p in problems_draft):
@@ -432,8 +455,13 @@ def page_create_exam(teacher_id: int):
         is_published = (exam_data or {}).get("is_published", False)
         label = "Ẩn bài kiểm tra" if is_published else "Công bố"
         icon = ":material/visibility_off:" if is_published else ":material/publish:"
-        if col_save2.button(label, icon=icon, key="oe_publish_toggle_btn", type="primary", use_container_width=True):
+        col_pub, _ = st.columns(2)
+        if col_pub.button(label, icon=icon, key="oe_publish_toggle_btn", use_container_width=True):
             service.set_exam_published(exam_id, teacher_id, not is_published)
             st.rerun()
+        st.caption(
+            "Công bố dùng **bản đã lưu gần nhất** — nếu vừa sửa gì thì bấm "
+            "'Lưu bài kiểm tra' ở khung phía trên trước."
+        )
     else:
-        col_save2.caption("Lưu nháp trước, sau đó chọn lại bài vừa tạo để bấm Công bố.")
+        st.caption("Bấm 'Lưu bài kiểm tra' ở khung phía trên trước, sau đó chọn lại bài vừa tạo để Công bố.")

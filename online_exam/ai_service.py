@@ -1,9 +1,10 @@
 import os
-import google.generativeai as genai
 import streamlit as st
+from google import genai
+from google.genai import types
 
 def ask_ai_tutor(problem: dict, student_code: str, chat_history: list, user_message: str) -> str:
-    """Gọi Google Gemini API để gợi ý học sinh, ép AI đóng vai gia sư không spoiler đáp án."""
+    """Gọi Google Gemini API (bản mới nhất google-genai) để gợi ý học sinh."""
     api_key = os.environ.get("GEMINI_API_KEY")
     if not api_key:
         if "GEMINI_API_KEY" in st.secrets:
@@ -12,7 +13,7 @@ def ask_ai_tutor(problem: dict, student_code: str, chat_history: list, user_mess
     if not api_key:
         return "Lỗi hệ thống: Chưa cấu hình GEMINI_API_KEY trong file .env hoặc st.secrets."
 
-    genai.configure(api_key=api_key)
+    client = genai.Client(api_key=api_key)
 
     system_prompt = f"""Bạn là một gia sư dạy lập trình Python tận tâm.
 Đề bài học sinh đang giải: {problem.get('title')}
@@ -30,21 +31,42 @@ Nhiệm vụ của bạn:
 5. Luôn giữ thái độ động viên, tích cực. Xưng hô là "AI" hoặc "Thầy/Cô" và gọi học sinh là "bạn" hoặc "em".
 """
 
-    model = genai.GenerativeModel(
-        model_name="gemini-1.5-flash",
-        system_instruction=system_prompt
-    )
-    
-    # Chuyển đổi lịch sử chat sang định dạng của Gemini (OpenAI dùng 'assistant', Gemini dùng 'model')
-    history = []
+    contents = []
+    # Khởi tạo history messages
     for msg in chat_history:
         role = "model" if msg["role"] == "assistant" else "user"
-        history.append({"role": role, "parts": [msg["content"]]})
-        
-    chat = model.start_chat(history=history)
+        contents.append(
+            types.Content(role=role, parts=[types.Part.from_text(text=msg["content"])])
+        )
+    
+    # Message mới nhất của user
+    contents.append(
+        types.Content(role="user", parts=[types.Part.from_text(text=user_message)])
+    )
 
     try:
-        response = chat.send_message(user_message)
+        # Sử dụng model mới nhất (gemini-2.0-flash hoặc gemini-1.5-flash)
+        # Google đã deprecate các model cũ ở v1beta
+        response = client.models.generate_content(
+            model='gemini-2.5-flash', # Try latest 2.5 or fallback below
+            contents=contents,
+            config=types.GenerateContentConfig(
+                system_instruction=system_prompt,
+                temperature=0.7,
+            ),
+        )
         return response.text
-    except Exception as e:
-        return f"Xin lỗi, có lỗi kết nối tới AI: {str(e)}"
+    except Exception:
+        try:
+            # Fallback 1.5 flash
+            response = client.models.generate_content(
+                model='gemini-1.5-flash',
+                contents=contents,
+                config=types.GenerateContentConfig(
+                    system_instruction=system_prompt,
+                    temperature=0.7,
+                ),
+            )
+            return response.text
+        except Exception as e2:
+            return f"Xin lỗi, có lỗi kết nối tới AI: {str(e2)}"

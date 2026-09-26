@@ -44,23 +44,14 @@ Nhiệm vụ của bạn:
         types.Content(role="user", parts=[types.Part.from_text(text=user_message)])
     )
 
-    try:
-        # Sử dụng model mới nhất (gemini-2.0-flash hoặc gemini-1.5-flash)
-        # Google đã deprecate các model cũ ở v1beta
-        response = client.models.generate_content(
-            model='gemini-2.5-flash', # Try latest 2.5 or fallback below
-            contents=contents,
-            config=types.GenerateContentConfig(
-                system_instruction=system_prompt,
-                temperature=0.7,
-            ),
-        )
-        return response.text
-    except Exception:
+    # Thử gọi lần lượt các model từ mới tới cũ để tránh lỗi 404
+    model_list = ['gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-1.5-flash', 'gemini-1.5-pro', 'gemini-pro']
+    last_error = None
+    
+    for model_name in model_list:
         try:
-            # Fallback 1.5 flash
             response = client.models.generate_content(
-                model='gemini-1.5-flash',
+                model=model_name,
                 contents=contents,
                 config=types.GenerateContentConfig(
                     system_instruction=system_prompt,
@@ -68,5 +59,13 @@ Nhiệm vụ của bạn:
                 ),
             )
             return response.text
-        except Exception as e2:
-            return f"Xin lỗi, có lỗi kết nối tới AI: {str(e2)}"
+        except Exception as e:
+            last_error = str(e)
+            continue
+            
+    # Nếu tất cả đều lỗi
+    try:
+        available = [m.name for m in client.models.list() if 'generateContent' in m.supported_actions]
+        return f"Xin lỗi, có lỗi kết nối tới AI: {last_error}.\n\n(API Key của bạn chỉ hỗ trợ các model sau: {', '.join(available)})"
+    except:
+        return f"Xin lỗi, có lỗi kết nối tới AI: {last_error}"

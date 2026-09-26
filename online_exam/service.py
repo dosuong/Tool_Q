@@ -678,7 +678,13 @@ def get_student_scoreboard(student_id: int) -> list[dict]:
                     "problems": problem_rows, "total_score": total,
                     "max_total": sum(float(p.max_score) for p in exam_problems),
                 }
-            rows.append({"exam": exam, "enrolled": enrollment is not None, "summary": summary})
+            rows.append({
+                "exam": exam,
+                "enrolled": enrollment is not None,
+                "enrollment": enrollment,
+                "progress_map": {p.id: progress_by_key.get((enrollment.id, p.id)) for p in exam_problems} if enrollment else {},
+                "summary": summary
+            })
         return rows
 
 

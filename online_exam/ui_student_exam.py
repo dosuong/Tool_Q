@@ -119,7 +119,6 @@ def _render_student_login():
                 st.rerun()
 
 
-@st.fragment
 def _render_scoreboard():
     student_id = st.session_state[f"{_STATE_PREFIX}student_id"]
     class_id = st.session_state[f"{_STATE_PREFIX}class_id"]
@@ -133,7 +132,7 @@ def _render_scoreboard():
         _reset_student_state()
         if "student_session" in st.query_params:
             del st.query_params["student_session"]
-        st.rerun(scope="app")
+        st.rerun()
     st.caption(full_name)
 
     # Cache bảng điểm trong session_state — tải 1 lần, các lần chuyển màn hình tiếp theo
@@ -165,7 +164,7 @@ def _render_scoreboard():
                 btn_label = "Vào làm bài" if can_enter_new else "Xem lại"
                 if c2.button(btn_label, key=f"se_enter_{exam.id}", use_container_width=True):
                     st.session_state[f"{_STATE_PREFIX}active_exam_id"] = exam.id
-                    st.rerun(scope="app")
+                    st.rerun()
 
 
 def _render_countdown(remaining_seconds: float):

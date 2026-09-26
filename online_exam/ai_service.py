@@ -35,19 +35,15 @@ Nhiệm vụ của bạn:
     # Khởi tạo history messages
     for msg in chat_history:
         role = "model" if msg["role"] == "assistant" else "user"
-        contents.append(
-            types.Content(role=role, parts=[types.Part.from_text(text=msg["content"])])
-        )
+        contents.append({"role": role, "parts": [{"text": msg["content"]}]})
     
     # Message mới nhất của user
-    contents.append(
-        types.Content(role="user", parts=[types.Part.from_text(text=user_message)])
-    )
+    contents.append({"role": "user", "parts": [{"text": user_message}]})
 
-    # Thử gọi lần lượt các model từ mới tới cũ để tránh lỗi 404
-    model_list = ['gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-1.5-flash', 'gemini-1.5-pro', 'gemini-pro']
-    last_error = None
+    # Dựa vào danh sách model bạn vừa cung cấp, ta ưu tiên gọi các bản flash mới nhất
+    model_list = ['gemini-3.5-flash', 'gemini-2.5-flash', 'gemini-flash-latest']
     
+    errors = []
     for model_name in model_list:
         try:
             response = client.models.generate_content(
@@ -60,12 +56,8 @@ Nhiệm vụ của bạn:
             )
             return response.text
         except Exception as e:
-            last_error = str(e)
+            errors.append(f"{model_name}: {str(e)}")
             continue
             
-    # Nếu tất cả đều lỗi
-    try:
-        available = [m.name for m in client.models.list() if 'generateContent' in m.supported_actions]
-        return f"Xin lỗi, có lỗi kết nối tới AI: {last_error}.\n\n(API Key của bạn chỉ hỗ trợ các model sau: {', '.join(available)})"
-    except:
-        return f"Xin lỗi, có lỗi kết nối tới AI: {last_error}"
+    # Nếu tất cả đều lỗi, in ra TẤT CẢ các lỗi để xem chính xác nó kẹt ở đâu
+    return f"Xin lỗi, có lỗi kết nối tới AI.\n\nChi tiết lỗi của từng model:\n" + "\n".join(errors)

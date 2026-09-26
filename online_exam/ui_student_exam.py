@@ -135,26 +135,27 @@ def _render_scoreboard():
         st.rerun()
     st.caption(full_name)
 
-    exams = service.list_exams_for_student(student_id)
-    if not exams:
+    # 1 lượt truy vấn gộp cho toàn bộ trang (trước đây: 1 session cho danh sách bài + 2
+    # session RIÊNG cho mỗi bài → 5 bài là ~10 session ≈ 3 giây mỗi lần bấm).
+    board = service.get_student_scoreboard(student_id)
+    if not board:
         st.info("Lớp chưa có bài kiểm tra nào.", icon=":material/info:")
         return
 
-    for exam in exams:
-        enrollment = service.get_enrollment(exam.id, student_id)
+    for entry in board:
+        exam, summary = entry["exam"], entry["summary"]
         with st.container(border=True):
             c1, c2 = st.columns([4, 1])
             c1.markdown(f"**{exam.title}** — {_exam_status_label(exam)}")
             if exam.description:
                 c1.caption(exam.description)
-            if enrollment:
-                summary = service.get_student_exam_summary(exam.id, enrollment.id)
+            if summary is not None:
                 c1.markdown(f"Điểm tổng: **{summary['total_score']:.2f} / {summary['max_total']:.2f}**")
                 for row in summary["problems"]:
                     score_txt = f"{row['score']:.2f}" if row["score"] is not None else "—"
                     c1.caption(f"　{row['title']}: {score_txt} / {row['max_score']:.2f}")
             can_enter_new = _exam_is_open_now(exam)
-            if can_enter_new or enrollment:
+            if can_enter_new or entry["enrolled"]:
                 btn_label = "Vào làm bài" if can_enter_new else "Xem lại"
                 if c2.button(btn_label, key=f"se_enter_{exam.id}", use_container_width=True):
                     st.session_state[f"{_STATE_PREFIX}active_exam_id"] = exam.id
@@ -188,7 +189,8 @@ def _render_take_exam(exam_id: int):
     class_id = st.session_state[f"{_STATE_PREFIX}class_id"]
     student_id = st.session_state[f"{_STATE_PREFIX}student_id"]
 
-    exam = service.get_exam_for_student(exam_id, class_id)
+    # Lấy bài kiểm tra + enrollment trong 1 session duy nhất (trước đây 2 session riêng).
+    exam, enrollment = service.load_take_exam_context(exam_id, class_id, student_id)
     if exam is None:
         st.error("Không tìm thấy bài kiểm tra.")
         return
@@ -202,7 +204,6 @@ def _render_take_exam(exam_id: int):
         st.caption(exam.description)
 
     can_enter_new = _exam_is_open_now(exam)
-    enrollment = service.get_enrollment(exam_id, student_id)
 
     if enrollment is None:
         if not can_enter_new:
@@ -242,10 +243,17 @@ def _render_take_exam(exam_id: int):
     # xem, nên gọi DB riêng từng câu sẽ nhân độ trễ theo số câu mỗi lần HS bấm bất kỳ nút nào.
     progress_map = service.get_or_create_problem_progress_bulk(enrollment.id, [p["id"] for p in problems])
 
+    # Mỗi câu là 1 FRAGMENT: gõ code / bấm nút trong Câu 2 chỉ chạy lại code của Câu 2.
+    # Nếu không tách, Streamlit dựng lại TOÀN BỘ các tab ở mọi thao tác (st.tabs luôn chạy
+    # code của mọi tab, kể cả tab đang ẩn) — với 5 câu là 5 lần dựng editor + bảng test case.
+    @st.fragment
+    def _problem_fragment(i: int, problem: dict, progress):
+        _render_problem_tab(i, exam, enrollment, problem, read_only_all, progress)
+
     tabs = st.tabs([f"Câu {i + 1}" for i in range(len(problems))])
     for i, (tab, problem) in enumerate(zip(tabs, problems)):
         with tab:
-            _render_problem_tab(i, exam, enrollment, problem, read_only_all, progress_map[problem["id"]])
+            _problem_fragment(i, problem, progress_map[problem["id"]])
 
 
 def _is_redundant_title(title: str, index: int) -> bool:

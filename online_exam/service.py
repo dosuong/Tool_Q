@@ -44,7 +44,7 @@ def _clear_read_caches():
     từng khoá) — rẻ và không có nguy cơ sót, vì ghi hiếm hơn đọc rất nhiều."""
     for cached_fn in (
         list_classes, list_exams, load_exam_full, load_exam_problems_for_student,
-        list_students, is_exam_locked_for_editing,
+        list_students, is_exam_locked_for_editing, get_class_by_id,
     ):
         cached_fn.clear()
 
@@ -90,6 +90,7 @@ def get_class(class_id: int, teacher_id: int) -> ClassRoom | None:
         ).scalar_one_or_none()
 
 
+@st.cache_data(ttl=_READ_CACHE_TTL, show_spinner=False)
 def get_class_by_id(class_id: int) -> ClassRoom | None:
     """Không lọc theo teacher_id — dùng cho luồng HS đã đăng nhập (đã biết đúng class_id qua
     tài khoản của mình, không cần xác thực lại quyền sở hữu GV)."""
@@ -602,6 +603,95 @@ def list_exams_for_student(student_id: int) -> list[Exam]:
             )
         ).scalars().all())
     return [e for e in exams if (e.is_published and not e.is_archived) or e.id in enrolled_ids]
+
+
+def get_student_scoreboard(student_id: int) -> list[dict]:
+    """Toàn bộ dữ liệu trang "Bảng điểm của tôi" trong ĐÚNG 1 session (~5 truy vấn), thay vì
+    1 session cho danh sách bài + 1 session/bài cho enrollment + 1 session/bài cho điểm.
+
+    Trước đây với 5 bài kiểm tra là ~10 session × ~280ms = gần 3 giây mỗi lần HS bấm bất cứ
+    thứ gì trên trang này. KHÔNG cache vì điểm phải luôn mới ngay sau khi HS nộp bài.
+
+    Trả về [{"exam": Exam, "enrolled": bool, "summary": {...} | None}, ...] — giữ nguyên
+    object Exam để _exam_status_label()/_exam_is_open_now() ở UI dùng y như cũ."""
+    with get_session() as session:
+        student = session.get(Student, student_id)
+        if student is None:
+            return []
+        exams = list(session.execute(
+            select(Exam).where(Exam.class_id == student.class_id).order_by(Exam.created_at.desc())
+        ).scalars().all())
+        if not exams:
+            return []
+
+        enrollments = list(session.execute(
+            select(Enrollment).where(
+                Enrollment.exam_id.in_([e.id for e in exams]), Enrollment.student_id == student_id,
+            )
+        ).scalars().all())
+        enrollment_by_exam = {en.exam_id: en for en in enrollments}
+
+        # Cùng quy tắc hiển thị như list_exams_for_student(): bài đang hoạt động HOẶC bài HS
+        # đã từng làm (để không mất quyền xem lại điểm khi GV ẩn/lưu trữ bài).
+        visible = [e for e in exams if (e.is_published and not e.is_archived) or e.id in enrollment_by_exam]
+        if not visible:
+            return []
+
+        problems = session.execute(
+            select(ExamProblem)
+            .where(ExamProblem.exam_id.in_([e.id for e in visible]))
+            .order_by(ExamProblem.order_index)
+        ).scalars().all()
+        problems_by_exam: dict[int, list[ExamProblem]] = {}
+        for p in problems:
+            problems_by_exam.setdefault(p.exam_id, []).append(p)
+
+        progress_by_key = {}
+        if enrollments:
+            for pp in session.execute(
+                select(ProblemProgress).where(
+                    ProblemProgress.enrollment_id.in_([en.id for en in enrollments])
+                )
+            ).scalars().all():
+                progress_by_key[(pp.enrollment_id, pp.problem_id)] = pp
+
+        rows = []
+        for exam in visible:
+            enrollment = enrollment_by_exam.get(exam.id)
+            summary = None
+            if enrollment is not None:
+                exam_problems = problems_by_exam.get(exam.id, [])
+                problem_rows, total = [], 0.0
+                for p in exam_problems:
+                    pp = progress_by_key.get((enrollment.id, p.id))
+                    score = float(pp.best_score) if pp and pp.best_score is not None else None
+                    total += score or 0.0
+                    problem_rows.append({
+                        "problem_id": p.id, "title": p.title, "max_score": float(p.max_score),
+                        "score": score, "attempts_used": pp.attempts_used if pp else 0,
+                        "max_attempts": p.max_attempts,
+                    })
+                summary = {
+                    "problems": problem_rows, "total_score": total,
+                    "max_total": sum(float(p.max_score) for p in exam_problems),
+                }
+            rows.append({"exam": exam, "enrolled": enrollment is not None, "summary": summary})
+        return rows
+
+
+def load_take_exam_context(exam_id: int, class_id: int, student_id: int) -> tuple[Exam | None, Enrollment | None]:
+    """Lấy bài kiểm tra + enrollment của HS trong CÙNG 1 session (trước đây 2 session riêng,
+    tốn thêm ~280ms mỗi lần rerun trang Làm bài)."""
+    with get_session() as session:
+        exam = session.execute(
+            select(Exam).where(Exam.id == exam_id, Exam.class_id == class_id)
+        ).scalar_one_or_none()
+        if exam is None:
+            return None, None
+        enrollment = session.execute(
+            select(Enrollment).where(Enrollment.exam_id == exam_id, Enrollment.student_id == student_id)
+        ).scalar_one_or_none()
+        return exam, enrollment
 
 
 def get_enrollment(exam_id: int, student_id: int) -> Enrollment | None:

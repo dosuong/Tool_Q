@@ -88,6 +88,7 @@ class Exam(Base):
     duration_minutes: Mapped[int | None] = mapped_column(Integer, nullable=True)
     access_code: Mapped[str | None] = mapped_column(String(100), nullable=True)
     final_score_policy: Mapped[str] = mapped_column(String(10), default="best", nullable=False)
+    allow_ai_assistant: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false", nullable=False)
     is_published: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     is_archived: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     force_unlocked: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)

@@ -191,7 +191,7 @@ def page_create_exam(teacher_id: int):
                 "Mô tả ngắn", value=(exam_data or {}).get("description", ""), key=f"{mkey}_desc",
             )
 
-            c1, c2, c3 = st.columns(3)
+            c1, c2, c3, c4 = st.columns(4)
             c1.checkbox(
                 "Cho phép code editor", value=(exam_data or {}).get("allow_code_editor", True),
                 key=f"{mkey}_editor",
@@ -200,10 +200,14 @@ def page_create_exam(teacher_id: int):
                 "Cho phép upload file", value=(exam_data or {}).get("allow_file_upload", True),
                 key=f"{mkey}_upload",
             )
+            c3.checkbox(
+                "Bật Trợ lý AI", value=(exam_data or {}).get("allow_ai_assistant", False),
+                key=f"{mkey}_ai_assistant", help="Cho phép học sinh chat với AI gia sư để nhận gợi ý."
+            )
             default_policy = (exam_data or {}).get("final_score_policy", "best")
             if default_policy not in _POLICY_OPTIONS:
                 default_policy = "best"
-            c3.selectbox(
+            c4.selectbox(
                 "Chính sách điểm", _POLICY_OPTIONS, index=_POLICY_OPTIONS.index(default_policy),
                 format_func=lambda p: "Điểm cao nhất" if p == "best" else "Điểm trung bình",
                 key=f"{mkey}_policy",
@@ -473,6 +477,7 @@ def page_create_exam(teacher_id: int):
                 "title": title, "description": description,
                 "allow_code_editor": st.session_state.get(f"{mkey}_editor", True),
                 "allow_file_upload": st.session_state.get(f"{mkey}_upload", True),
+                "allow_ai_assistant": st.session_state.get(f"{mkey}_ai_assistant", False),
                 "duration_minutes": duration_minutes or None,
                 "access_code": access_code.strip() or None,
                 "final_score_policy": st.session_state.get(f"{mkey}_policy", "best"),

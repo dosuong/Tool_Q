@@ -325,6 +325,34 @@ def _render_problem_tab(index: int, exam, enrollment, problem: dict, read_only_a
                 service.record_trial_submission(progress.id, submission_mode, code_text, original_filename, result)
                 _render_trial_result(result, sample_tcs)
 
+        # Giao diện Chatbot AI (chỉ hiện nếu bài kiểm tra bật tính năng và chưa bị khoá nộp)
+        if getattr(exam, "allow_ai_assistant", False):
+            st.divider()
+            with st.expander("🤖 Trợ lý AI (Gia sư ảo)", expanded=False):
+                chat_key = f"{_STATE_PREFIX}chat_{enrollment.id}_{problem['id']}"
+                if chat_key not in st.session_state:
+                    st.session_state[chat_key] = []
+                
+                # Hiển thị lịch sử chat
+                for msg in st.session_state[chat_key]:
+                    with st.chat_message(msg["role"]):
+                        st.markdown(msg["content"])
+                
+                # Khung nhập chat
+                if user_prompt := st.chat_input("Hỏi AI gợi ý về code của bạn..."):
+                    # Hiện ngay câu hỏi của user
+                    with st.chat_message("user"):
+                        st.markdown(user_prompt)
+                    st.session_state[chat_key].append({"role": "user", "content": user_prompt})
+                    
+                    # Gọi AI Service
+                    with st.chat_message("assistant"):
+                        with st.spinner("AI đang suy nghĩ..."):
+                            from online_exam.ai_service import ask_ai_tutor
+                            ai_response = ask_ai_tutor(problem, code_text, st.session_state[chat_key][:-1], user_prompt)
+                        st.markdown(ai_response)
+                    st.session_state[chat_key].append({"role": "assistant", "content": ai_response})
+
         if col_submit.button("Nộp câu này", type="primary", key=f"{pkey}_submit_btn", use_container_width=True):
             if not code_text.strip():
                 st.error("Chưa có code để nộp.")

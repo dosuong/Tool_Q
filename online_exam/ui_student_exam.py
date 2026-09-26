@@ -133,12 +133,17 @@ def _render_scoreboard():
         _reset_student_state()
         if "student_session" in st.query_params:
             del st.query_params["student_session"]
-        st.rerun()
+        st.rerun(scope="app")
     st.caption(full_name)
 
-    # 1 lượt truy vấn gộp cho toàn bộ trang (trước đây: 1 session cho danh sách bài + 2
-    # session RIÊNG cho mỗi bài → 5 bài là ~10 session ≈ 3 giây mỗi lần bấm).
-    board = service.get_student_scoreboard(student_id)
+    # Cache bảng điểm trong session_state — tải 1 lần, các lần chuyển màn hình tiếp theo
+    # đọc từ RAM thay vì query lại Supabase qua Internet (mỗi lần trước đây tốn ~4 SQL × 150ms).
+    # Bị xoá tường minh sau mỗi lần HS Nộp bài chính thức hoặc lần đầu vào bài (create_enrollment).
+    board_key = f"{_STATE_PREFIX}board_{student_id}"
+    if board_key not in st.session_state:
+        st.session_state[board_key] = service.get_student_scoreboard(student_id)
+    board = st.session_state[board_key]
+
     if not board:
         st.info("Lớp chưa có bài kiểm tra nào.", icon=":material/info:")
         return
@@ -160,7 +165,7 @@ def _render_scoreboard():
                 btn_label = "Vào làm bài" if can_enter_new else "Xem lại"
                 if c2.button(btn_label, key=f"se_enter_{exam.id}", use_container_width=True):
                     st.session_state[f"{_STATE_PREFIX}active_exam_id"] = exam.id
-                    st.rerun()
+                    st.rerun(scope="app")
 
 
 def _render_countdown(remaining_seconds: float):
@@ -190,8 +195,13 @@ def _render_take_exam(exam_id: int):
     class_id = st.session_state[f"{_STATE_PREFIX}class_id"]
     student_id = st.session_state[f"{_STATE_PREFIX}student_id"]
 
-    # Lấy bài kiểm tra + enrollment trong 1 session duy nhất (trước đây 2 session riêng).
-    exam, enrollment = service.load_take_exam_context(exam_id, class_id, student_id)
+    # Cache (Exam, Enrollment) — tránh 1 SQL RTT × 150ms mỗi lần rerun trang Làm bài.
+    # Được xoá và tạo lại khi HS vào bài lần đầu (create_enrollment).
+    ctx_key = f"{_STATE_PREFIX}ctx_{exam_id}"
+    if ctx_key not in st.session_state:
+        st.session_state[ctx_key] = service.load_take_exam_context(exam_id, class_id, student_id)
+    exam, enrollment = st.session_state[ctx_key]
+
     if exam is None:
         st.error("Không tìm thấy bài kiểm tra.")
         return
@@ -220,6 +230,10 @@ def _render_take_exam(exam_id: int):
                 st.error("Sai mật khẩu.")
                 return
         enrollment = service.create_enrollment(exam_id, student_id)
+        # Cập nhật cache ctx với enrollment mới; xoá cache bảng điểm để lần sau
+        # quay về bảng điểm sẽ thấy nút "Xem lại" thay vì "Vào làm bài".
+        st.session_state[ctx_key] = (exam, enrollment)
+        st.session_state.pop(f"{_STATE_PREFIX}board_{student_id}", None)
 
     deadline = service.compute_deadline(exam, enrollment)
     now = datetime.now(timezone.utc)
@@ -234,15 +248,24 @@ def _render_take_exam(exam_id: int):
         st.info(f"Bài kiểm tra {reason} — bạn chỉ xem lại được bài đã làm, không nộp thêm được.",
                 icon=":material/lock:")
 
-    problems = service.load_exam_problems_for_student(exam_id)
+    # Cache danh sách câu hỏi — bất biến trong phiên thi (GV không thể sửa khi đã có bài nộp).
+    problems_key = f"{_STATE_PREFIX}problems_{exam_id}"
+    if problems_key not in st.session_state:
+        st.session_state[problems_key] = service.load_exam_problems_for_student(exam_id)
+    problems = st.session_state[problems_key]
+
     if not problems:
         st.info("Bài kiểm tra chưa có câu nào.", icon=":material/info:")
         return
 
-    # Nạp tiến độ TẤT CẢ các câu trong 1-2 round-trip DB (không phải N round-trip riêng lẻ)
-    # — bắt buộc vì st.tabs() chạy lại code của MỌI tab ở MỌI lần rerun, không chỉ tab đang
-    # xem, nên gọi DB riêng từng câu sẽ nhân độ trễ theo số câu mỗi lần HS bấm bất kỳ nút nào.
-    progress_map = service.get_or_create_problem_progress_bulk(enrollment.id, [p["id"] for p in problems])
+    # Cache tiến độ tất cả câu — bị xoá sau mỗi lần Nộp bài chính thức (record_official_submission)
+    # để rerun tiếp theo tải lại điểm/lượt nộp mới nhất từ DB.
+    progress_key = f"{_STATE_PREFIX}progress_{enrollment.id}"
+    if progress_key not in st.session_state:
+        st.session_state[progress_key] = service.get_or_create_problem_progress_bulk(
+            enrollment.id, [p["id"] for p in problems]
+        )
+    progress_map = st.session_state[progress_key]
 
     tabs = st.tabs([f"Câu {i + 1}" for i in range(len(problems))])
     for i, (tab, problem) in enumerate(zip(tabs, problems)):
@@ -320,7 +343,12 @@ def _render_problem_tab(index: int, exam, enrollment, problem: dict, read_only_a
                         f"(test mẫu {sample_pass}/{n_sample}, test ẩn {hidden_pass}/{hidden_total})",
                         icon=":material/check_circle:",
                     )
-                    st.rerun()
+                    # Xoá cache tiến độ + bảng điểm để full rerun tiếp theo tải lại điểm/lượt
+                    # nộp mới nhất từ DB, thay vì đọc dữ liệu cũ từ session_state.
+                    _sid = st.session_state.get(f"{_STATE_PREFIX}student_id")
+                    st.session_state.pop(f"{_STATE_PREFIX}progress_{enrollment.id}", None)
+                    st.session_state.pop(f"{_STATE_PREFIX}board_{_sid}", None)
+                    st.rerun(scope="app")
     else:
         reason = "hết thời gian làm bài" if read_only_all else "đã dùng hết lượt nộp"
         st.info(f"Câu này hiện chỉ xem được ({reason}) — không nộp thêm được.", icon=":material/lock:")

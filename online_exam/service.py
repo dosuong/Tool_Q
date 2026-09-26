@@ -618,21 +618,24 @@ def get_student_scoreboard(student_id: int) -> list[dict]:
         student = session.get(Student, student_id)
         if student is None:
             return []
-        exams = list(session.execute(
-            select(Exam).where(Exam.class_id == student.class_id).order_by(Exam.created_at.desc())
-        ).scalars().all())
-        if not exams:
-            return []
 
-        enrollments = list(session.execute(
-            select(Enrollment).where(
-                Enrollment.exam_id.in_([e.id for e in exams]), Enrollment.student_id == student_id,
+        # Gộp SELECT Exam + SELECT Enrollment thành 1 câu LEFT JOIN — giảm 1 SQL RTT (~150ms)
+        # so với cách cũ (2 SQL nối tiếp trong cùng session qua Supabase).
+        exam_rows = session.execute(
+            select(Exam, Enrollment)
+            .outerjoin(
+                Enrollment,
+                (Enrollment.exam_id == Exam.id) & (Enrollment.student_id == student_id),
             )
-        ).scalars().all())
-        enrollment_by_exam = {en.exam_id: en for en in enrollments}
+            .where(Exam.class_id == student.class_id)
+            .order_by(Exam.created_at.desc())
+        ).all()
+        if not exam_rows:
+            return []
+        exams = [r[0] for r in exam_rows]
+        enrollment_by_exam = {r[0].id: r[1] for r in exam_rows if r[1] is not None}
+        enrollments = list(enrollment_by_exam.values())
 
-        # Cùng quy tắc hiển thị như list_exams_for_student(): bài đang hoạt động HOẶC bài HS
-        # đã từng làm (để không mất quyền xem lại điểm khi GV ẩn/lưu trữ bài).
         visible = [e for e in exams if (e.is_published and not e.is_archived) or e.id in enrollment_by_exam]
         if not visible:
             return []
@@ -683,15 +686,17 @@ def load_take_exam_context(exam_id: int, class_id: int, student_id: int) -> tupl
     """Lấy bài kiểm tra + enrollment của HS trong CÙNG 1 session (trước đây 2 session riêng,
     tốn thêm ~280ms mỗi lần rerun trang Làm bài)."""
     with get_session() as session:
-        exam = session.execute(
-            select(Exam).where(Exam.id == exam_id, Exam.class_id == class_id)
-        ).scalar_one_or_none()
-        if exam is None:
+        row = session.execute(
+            select(Exam, Enrollment)
+            .outerjoin(
+                Enrollment,
+                (Enrollment.exam_id == Exam.id) & (Enrollment.student_id == student_id),
+            )
+            .where(Exam.id == exam_id, Exam.class_id == class_id)
+        ).first()
+        if row is None:
             return None, None
-        enrollment = session.execute(
-            select(Enrollment).where(Enrollment.exam_id == exam_id, Enrollment.student_id == student_id)
-        ).scalar_one_or_none()
-        return exam, enrollment
+        return row[0], row[1]
 
 
 def get_enrollment(exam_id: int, student_id: int) -> Enrollment | None:

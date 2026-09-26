@@ -331,14 +331,12 @@ def _render_problem_tab(index: int, exam, enrollment, problem: dict, read_only_a
         st.info(f"Câu này hiện chỉ xem được ({reason}) — không nộp thêm được.", icon=":material/lock:")
 
     if progress.best_submission_id:
-        # Lazy: chỉ query DB (2 lượt) khi HS THỰC SỰ mở expander này, không phải mọi lần rerun
-        # — cùng lý do với get_or_create_problem_progress_bulk ở trên, tránh nhân độ trễ theo
-        # số câu vì st.tabs() render lại code của mọi tab dù đang đóng.
-        review_key = f"{pkey}_review_expander"
-        review_expander = st.expander("Xem bài đã nộp (bản được tính điểm)", icon=":material/history:", key=review_key)
-        with review_expander:
-            if st.session_state.get(review_key):
-                _render_official_review(progress.best_submission_id, problem, sample_tcs)
+        # KHÔNG dùng lại mẹo "chỉ query khi expander đang mở": st.expander(key=...) KHÔNG ghi
+        # trạng thái đóng/mở vào session_state, nên điều kiện đó luôn sai và HS chỉ thấy khung
+        # rỗng. Thay vào đó cứ vẽ bình thường — chi phí đã được xử lý bằng cách cache
+        # service.get_submission_with_results (dữ liệu bài đã nộp là bất biến sau khi ghi).
+        with st.expander("Xem bài đã nộp (bản được tính điểm)", icon=":material/history:"):
+            _render_official_review(progress.best_submission_id, problem, sample_tcs)
 
 
 def _render_code_input(exam, pkey: str, progress):

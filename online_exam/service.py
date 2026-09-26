@@ -966,7 +966,11 @@ def get_student_exam_summary(exam_id: int, enrollment_id: int) -> dict:
         }
 
 
+@st.cache_data(ttl=_READ_CACHE_TTL, show_spinner=False)
 def get_submission_with_results(submission_id: int) -> tuple[Submission | None, list[SubmissionResult]]:
+    """Cache được vì 1 lần nộp là BẤT BIẾN sau khi ghi: không có code nào UPDATE lại
+    submissions/submission_results. Quan trọng cho hiệu năng vì hàm này bị gọi rất nhiều —
+    mỗi câu của mỗi HS khi xem lại, và toàn bộ HS × câu khi GV xuất Excel/ZIP ở trang Kết quả."""
     with get_session() as session:
         submission = session.get(Submission, submission_id)
         if submission is None:

@@ -311,79 +311,65 @@ def _render_problem_tab(index: int, exam, enrollment, problem: dict, read_only_a
     attempts_exhausted = max_attempts is not None and progress.attempts_used >= max_attempts
     is_locked = read_only_all or attempts_exhausted
     pkey = f"se_p_{exam.id}_{problem['id']}"
+    ai_enabled = getattr(exam, "allow_ai_assistant", False)
 
-    if not is_locked:
-        code_text, submission_mode, original_filename = _render_code_input(exam, pkey, progress)
-
-        col_trial, col_submit = st.columns(2)
-        if col_trial.button("Chạy thử (chỉ test mẫu)", key=f"{pkey}_trial_btn", use_container_width=True):
-            if not code_text.strip():
-                st.error("Chưa có code để chạy thử.")
-            else:
-                with st.spinner("Đang chấm thử..."):
-                    result = grading.grade_problem(code_text, problem, sample_tcs)
-                service.record_trial_submission(progress.id, submission_mode, code_text, original_filename, result)
-                _render_trial_result(result, sample_tcs)
-
-        # Giao diện Chatbot AI (chỉ hiện nếu bài kiểm tra bật tính năng và chưa bị khoá nộp)
-        if getattr(exam, "allow_ai_assistant", False):
-            st.divider()
-            with st.expander("🤖 Trợ lý AI (Gia sư ảo)", expanded=False):
-                chat_key = f"{_STATE_PREFIX}chat_{enrollment.id}_{problem['id']}"
-                if chat_key not in st.session_state:
-                    st.session_state[chat_key] = []
-                
-                # Hiển thị lịch sử chat
-                for msg in st.session_state[chat_key]:
-                    with st.chat_message(msg["role"]):
-                        st.markdown(msg["content"])
-                
-                # Khung nhập chat
-                if user_prompt := st.chat_input("Hỏi AI gợi ý về code của bạn..."):
-                    # Hiện ngay câu hỏi của user
-                    with st.chat_message("user"):
-                        st.markdown(user_prompt)
-                    st.session_state[chat_key].append({"role": "user", "content": user_prompt})
-                    
-                    # Gọi AI Service
-                    with st.chat_message("assistant"):
-                        with st.spinner("AI đang suy nghĩ..."):
-                            from online_exam.ai_service import ask_ai_tutor
-                            ai_response = ask_ai_tutor(problem, code_text, st.session_state[chat_key][:-1], user_prompt)
-                        st.markdown(ai_response)
-                    st.session_state[chat_key].append({"role": "assistant", "content": ai_response})
-
-        if col_submit.button("Nộp câu này", type="primary", key=f"{pkey}_submit_btn", use_container_width=True):
-            if not code_text.strip():
-                st.error("Chưa có code để nộp.")
-            else:
-                with st.spinner("Đang chấm bài..."):
-                    result = grading.grade_problem(code_text, problem, problem["test_cases"])
-                try:
-                    submission = service.record_official_submission(
-                        progress.id, problem, exam, enrollment, submission_mode, code_text, original_filename, result,
-                    )
-                except service.SubmissionBlocked as e:
-                    st.error(str(e), icon=":material/block:")
-                else:
-                    n_sample = len(sample_tcs)
-                    sample_pass = sum(1 for r in result["results"] if r["is_sample"] and r["passed"])
-                    hidden_total = len(result["results"]) - n_sample
-                    hidden_pass = sum(1 for r in result["results"] if not r["is_sample"] and r["passed"])
-                    st.success(
-                        f"Đã nộp — điểm lần này: {float(submission.final_score):.2f}/{problem['max_score']:.2f} "
-                        f"(test mẫu {sample_pass}/{n_sample}, test ẩn {hidden_pass}/{hidden_total})",
-                        icon=":material/check_circle:",
-                    )
-                    # Xoá cache tiến độ + bảng điểm để full rerun tiếp theo tải lại điểm/lượt
-                    # nộp mới nhất từ DB, thay vì đọc dữ liệu cũ từ session_state.
-                    _sid = st.session_state.get(f"{_STATE_PREFIX}student_id")
-                    st.session_state.pop(f"{_STATE_PREFIX}progress_{enrollment.id}", None)
-                    st.session_state.pop(f"{_STATE_PREFIX}board_{_sid}", None)
-                    st.rerun(scope="app")
+    if ai_enabled:
+        col_code, col_chat = st.columns([3, 2])
     else:
-        reason = "hết thời gian làm bài" if read_only_all else "đã dùng hết lượt nộp"
-        st.info(f"Câu này hiện chỉ xem được ({reason}) — không nộp thêm được.", icon=":material/lock:")
+        col_code = st.container()
+        col_chat = None
+
+    code_text = ""
+    with col_code:
+        if not is_locked:
+            code_text, submission_mode, original_filename = _render_code_input(exam, pkey, progress)
+
+            col_trial, col_submit = st.columns(2)
+            if col_trial.button("Chạy thử (chỉ test mẫu)", key=f"{pkey}_trial_btn", use_container_width=True):
+                if not code_text.strip():
+                    st.error("Chưa có code để chạy thử.")
+                else:
+                    with st.spinner("Đang chấm thử..."):
+                        result = grading.grade_problem(code_text, problem, sample_tcs)
+                    service.record_trial_submission(progress.id, submission_mode, code_text, original_filename, result)
+                    _render_trial_result(result, sample_tcs)
+
+            if col_submit.button("Nộp câu này", type="primary", key=f"{pkey}_submit_btn", use_container_width=True):
+                if not code_text.strip():
+                    st.error("Chưa có code để nộp.")
+                else:
+                    with st.spinner("Đang chấm bài..."):
+                        result = grading.grade_problem(code_text, problem, problem["test_cases"])
+                    try:
+                        submission = service.record_official_submission(
+                            progress.id, problem, exam, enrollment, submission_mode, code_text, original_filename, result,
+                        )
+                    except service.SubmissionBlocked as e:
+                        st.error(str(e), icon=":material/block:")
+                    else:
+                        n_sample = len(sample_tcs)
+                        sample_pass = sum(1 for r in result["results"] if r["is_sample"] and r["passed"])
+                        hidden_total = len(result["results"]) - n_sample
+                        hidden_pass = sum(1 for r in result["results"] if not r["is_sample"] and r["passed"])
+                        st.success(
+                            f"Đã nộp — điểm lần này: {float(submission.final_score):.2f}/{problem['max_score']:.2f} "
+                            f"(test mẫu {sample_pass}/{n_sample}, test ẩn {hidden_pass}/{hidden_total})",
+                            icon=":material/check_circle:",
+                        )
+                        # Xoá cache tiến độ + bảng điểm để full rerun tiếp theo tải lại điểm/lượt
+                        # nộp mới nhất từ DB, thay vì đọc dữ liệu cũ từ session_state.
+                        _sid = st.session_state.get(f"{_STATE_PREFIX}student_id")
+                        st.session_state.pop(f"{_STATE_PREFIX}progress_{enrollment.id}", None)
+                        st.session_state.pop(f"{_STATE_PREFIX}board_{_sid}", None)
+                        st.rerun(scope="app")
+        else:
+            reason = "hết thời gian làm bài" if read_only_all else "đã dùng hết lượt nộp"
+            st.info(f"Câu này hiện chỉ xem được ({reason}) — không nộp thêm được.", icon=":material/lock:")
+            code_text = progress.draft_code or ""
+
+    if col_chat is not None:
+        with col_chat:
+            _render_ai_chat_panel(exam, enrollment, problem, code_text, pkey)
 
     if progress.best_submission_id:
         # KHÔNG dùng lại mẹo "chỉ query khi expander đang mở": st.expander(key=...) KHÔNG ghi
@@ -536,3 +522,35 @@ def _render_official_review(submission_id: int, problem: dict, sample_tcs: list[
     if submission.submission_mode == "editor":
         with st.expander("Xem code đã nộp", icon=":material/code:"):
             st.code(submission.code_text, language="python")
+
+
+def _render_ai_chat_panel(exam, enrollment, problem: dict, code_text: str, pkey: str):
+    """Bảng điều khiển AI Chatbox (cột bên phải).
+    Nằm bên trong `@st.fragment` của `_render_problem_tab` nên khi gửi tin nhắn,
+    chỉ có riêng tab này chạy lại — tuyệt đối không đơ/xám toàn trang."""
+    chat_key = f"{_STATE_PREFIX}chat_{enrollment.id}_{problem['id']}"
+    if chat_key not in st.session_state:
+        st.session_state[chat_key] = []
+
+    st.markdown("##### 🤖 Trợ lý AI (Gia sư ảo)")
+
+    # Khung cuộn chứa các tin nhắn — tự động hiển thị tin nhắn mới ở dưới cùng
+    with st.container(height=450, border=True):
+        if not st.session_state[chat_key]:
+            st.caption("💬 Chưa có tin nhắn nào. Bạn hãy nhập câu hỏi bên dưới để hỏi AI gợi ý nhé!")
+        for msg in st.session_state[chat_key]:
+            with st.chat_message(msg["role"]):
+                st.markdown(msg["content"])
+
+    # Ô nhập tin nhắn
+    if user_prompt := st.chat_input("Hỏi AI gợi ý về code...", key=f"{pkey}_ai_input"):
+        st.session_state[chat_key].append({"role": "user", "content": user_prompt})
+        with st.spinner("AI đang suy nghĩ..."):
+            from online_exam.ai_service import ask_ai_tutor
+            ai_response = ask_ai_tutor(
+                problem, code_text,
+                st.session_state[chat_key][:-1], user_prompt
+            )
+        st.session_state[chat_key].append({"role": "assistant", "content": ai_response})
+        st.rerun(scope="fragment")
+

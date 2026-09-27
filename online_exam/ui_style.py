@@ -13,7 +13,7 @@ import streamlit as st
 import streamlit.components.v1 as components
 
 def _inject_tab_hack():
-    # Hack để cho phép gõ phím Tab trong textarea của Streamlit (mặc định Tab sẽ chuyển focus)
+    # Hack cho phép gõ phím Tab trong textarea và tự động lọc danh sách khi gõ trong ô tìm kiếm (stTextInput)
     components.html(
         """
         <script>
@@ -24,14 +24,28 @@ def _inject_tab_hack():
                 const ta = e.target;
                 const start = ta.selectionStart;
                 const end = ta.selectionEnd;
-                // Chèn 4 dấu cách
                 ta.value = ta.value.substring(0, start) + "    " + ta.value.substring(end);
-                // Đặt lại con trỏ
                 ta.selectionStart = ta.selectionEnd = start + 4;
-                // Kích hoạt sự kiện input để React của Streamlit nhận diện thay đổi
                 ta.dispatchEvent(new Event('input', {bubbles: true}));
             }
         });
+
+        // Tự động kích hoạt lọc danh sách ngay khi gõ vào ô tìm kiếm (không cần bấm Enter/click ra ngoài)
+        let _liveSearchTimer = null;
+        doc.addEventListener('input', function(e) {
+            const input = e.target;
+            if (input && input.tagName.toLowerCase() === 'input') {
+                const container = input.closest('div[data-testid="stTextInput"]');
+                if (container) {
+                    clearTimeout(_liveSearchTimer);
+                    _liveSearchTimer = setTimeout(function() {
+                        input.dispatchEvent(new KeyboardEvent('keydown', {
+                            key: 'Enter', code: 'Enter', keyCode: 13, which: 13, bubbles: true
+                        }));
+                    }, 250);
+                }
+            }
+        }, { passive: true });
         </script>
         """,
         height=0,

@@ -159,41 +159,50 @@ def render_student_management(class_id: int, teacher_id: int):
 
     _render_bulk_import(class_id, teacher_id)
 
+    _render_student_list_fragment(class_id, teacher_id)
+
+
+@st.fragment
+def _render_student_list_fragment(class_id: int, teacher_id: int):
     students = service.list_students(class_id, teacher_id)
     if not students:
         st.info("Lớp chưa có học sinh nào.", icon=":material/info:")
         return
 
+    st.divider()
     search_term = st.text_input(
-        "Tìm kiếm học sinh (theo tên hoặc tài khoản)", icon=":material/search:", key=f"search_student_{class_id}",
+        "🔍 Tìm kiếm học sinh (lọc thời gian thực theo tên hoặc tài khoản)",
+        key=f"search_student_{class_id}",
     )
     
     import unicodedata
     def _normalize_search(text: str) -> str:
         if not text:
             return ""
-        # Remove accents for accent-insensitive search
         nfkd = unicodedata.normalize('NFKD', text)
         no_accent = "".join([c for c in nfkd if not unicodedata.combining(c)]).lower()
         return no_accent.replace("đ", "d")
         
     search_norm = _normalize_search(search_term)
 
-    visible_count = 0
+    filtered_students = []
     for s in students:
         if search_norm:
             name_norm = _normalize_search(s.full_name)
             if search_norm not in name_norm and search_norm not in s.username.lower():
                 continue
-        
-        visible_count += 1
+        filtered_students.append(s)
+
+    st.caption(f"Danh sách học sinh ({len(filtered_students)}/{len(students)})")
+
+    for s in filtered_students:
         with st.container(border=True):
             col_info, col_reset, col_delete = st.columns([3, 1, 1])
-            col_info.markdown(f"**{s.full_name}** — tài khoản `{s.username}`")
+            col_info.markdown(f"👤 **{s.full_name}** — Tài khoản: `{s.username}`")
             if col_reset.button("Reset mật khẩu", icon=":material/key:", key=f"reset_pw_{s.id}", use_container_width=True):
                 new_password = service.reset_student_password(s.id, teacher_id)
                 st.session_state[f"_reset_pw_shown_{s.id}"] = new_password
-                st.rerun()
+                st.rerun(scope="fragment")
             if col_delete.button("Xoá", icon=":material/delete:", key=f"delete_student_{s.id}", use_container_width=True):
                 _confirm_delete_student(s.id, teacher_id, s.full_name, class_id)
 
@@ -203,6 +212,6 @@ def render_student_management(class_id: int, teacher_id: int):
                     f"Mật khẩu mới cho **{s.full_name}** (chỉ hiện 1 lần): `{st.session_state.pop(reset_shown_key)}`",
                     icon=":material/key:",
                 )
-                
-    if visible_count == 0 and search_term:
+
+    if not filtered_students and search_term:
         st.info("Không tìm thấy học sinh nào khớp với từ khoá tìm kiếm.", icon=":material/search:")

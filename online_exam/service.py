@@ -68,7 +68,6 @@ def create_class(teacher_id: int, name: str) -> ClassRoom:
         room = ClassRoom(teacher_id=teacher_id, name=name.strip(), join_code=join_code)
         session.add(room)
         session.commit()
-        session.refresh(room)
         _clear_read_caches()
         return room
 
@@ -517,7 +516,6 @@ def create_student(teacher_id: int, class_id: int, full_name: str, custom_userna
         )
         session.add(student)
         session.commit()
-        session.refresh(student)
         _clear_read_caches()
         return student, raw_password
 
@@ -742,7 +740,6 @@ def create_enrollment(exam_id: int, student_id: int) -> Enrollment:
         enrollment = Enrollment(exam_id=exam_id, student_id=student_id)
         session.add(enrollment)
         session.commit()
-        session.refresh(enrollment)
         return enrollment
 
 
@@ -769,7 +766,6 @@ def get_or_create_problem_progress(enrollment_id: int, problem_id: int) -> Probl
         progress = ProblemProgress(enrollment_id=enrollment_id, problem_id=problem_id)
         session.add(progress)
         session.commit()
-        session.refresh(progress)
         return progress
 
 
@@ -838,16 +834,17 @@ def record_trial_submission(problem_progress_id: int, submission_mode: str, code
         )
         session.add(submission)
         session.flush()
-        for r in grading_result["results"]:
-            if r["test_case_id"] is None:
-                continue
-            session.add(SubmissionResult(
+        results_to_add = [
+            SubmissionResult(
                 submission_id=submission.id, test_case_id=r["test_case_id"], passed=r["passed"],
                 actual_output=r["actual_output"] or "", error_message=r["error_message"] or "",
                 execution_time_ms=r.get("execution_time_ms"),
-            ))
+            )
+            for r in grading_result["results"] if r.get("test_case_id") is not None
+        ]
+        if results_to_add:
+            session.add_all(results_to_add)
         session.commit()
-        session.refresh(submission)
         return submission
 
 

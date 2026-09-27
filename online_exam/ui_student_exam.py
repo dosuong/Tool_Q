@@ -274,9 +274,10 @@ def _render_take_exam(exam_id: int):
     progress_map = st.session_state[progress_key]
 
     tabs = st.tabs([f"Câu {i + 1}" for i in range(len(problems))])
+    total_problems = len(problems)
     for i, (tab, problem) in enumerate(zip(tabs, problems)):
         with tab:
-            _render_problem_tab(i, exam, enrollment, problem, read_only_all, progress_map[problem["id"]])
+            _render_problem_tab(i, total_problems, exam, enrollment, problem, read_only_all, progress_map[problem["id"]])
 
 
 def _is_redundant_title(title: str, index: int) -> bool:
@@ -287,7 +288,7 @@ def _is_redundant_title(title: str, index: int) -> bool:
 
 
 @st.fragment
-def _render_problem_tab(index: int, exam, enrollment, problem: dict, read_only_all: bool, progress):
+def _render_problem_tab(index: int, total_problems: int, exam, enrollment, problem: dict, read_only_all: bool, progress):
     header = f"Câu {index + 1}"
     title = problem.get("title", "")
     if title and not _is_redundant_title(title, index):
@@ -382,6 +383,52 @@ def _render_problem_tab(index: int, exam, enrollment, problem: dict, read_only_a
         # service.get_submission_with_results (dữ liệu bài đã nộp là bất biến sau khi ghi).
         with st.expander("Xem bài đã nộp (bản được tính điểm)", icon=":material/history:"):
             _render_official_review(progress.best_submission_id, problem, sample_tcs)
+
+    # Thanh điều hướng câu trước / câu tiếp theo ở cuối trang
+    if total_problems > 1:
+        st.divider()
+        nav_prev_col, _, nav_next_col = st.columns([2, 3, 2])
+        if index > 0:
+            if nav_prev_col.button(f"← Câu {index}", key=f"{pkey}_nav_prev", use_container_width=True):
+                st.components.v1.html(
+                    f"""
+                    <script>
+                    function switchTab() {{
+                        const doc = window.parent.document;
+                        const tabs = doc.querySelectorAll('div[data-testid="stTabs"] [role="tab"], div[data-testid="stTabs"] button[data-baseweb="tab"]');
+                        if (tabs && tabs[{index - 1}]) {{
+                            tabs[{index - 1}].click();
+                            window.parent.scrollTo({{ top: 0, behavior: 'smooth' }});
+                        }}
+                    }}
+                    switchTab();
+                    setTimeout(switchTab, 50);
+                    </script>
+                    """,
+                    height=0,
+                    width=0,
+                )
+
+        if index < total_problems - 1:
+            if nav_next_col.button(f"Câu {index + 2} →", type="primary", key=f"{pkey}_nav_next", use_container_width=True):
+                st.components.v1.html(
+                    f"""
+                    <script>
+                    function switchTab() {{
+                        const doc = window.parent.document;
+                        const tabs = doc.querySelectorAll('div[data-testid="stTabs"] [role="tab"], div[data-testid="stTabs"] button[data-baseweb="tab"]');
+                        if (tabs && tabs[{index + 1}]) {{
+                            tabs[{index + 1}].click();
+                            window.parent.scrollTo({{ top: 0, behavior: 'smooth' }});
+                        }}
+                    }}
+                    switchTab();
+                    setTimeout(switchTab, 50);
+                    </script>
+                    """,
+                    height=0,
+                    width=0,
+                )
 
 
 def _render_code_input(exam, pkey: str, progress):

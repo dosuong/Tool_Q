@@ -45,11 +45,13 @@ Nhiệm vụ của bạn:
     # Message mới nhất của user
     contents.append({"role": "user", "parts": [{"text": user_message}]})
 
-    # Nếu đã tìm được model chạy ngon trước đó, dùng ngay không cần thử lại
-    if _CACHED_WORKING_MODEL:
-        model_list = [_CACHED_WORKING_MODEL]
+    # Danh sách model dự phòng theo thứ tự ưu tiên
+    all_models = ['gemini-2.5-flash', 'gemini-1.5-flash', 'gemini-flash-latest', 'gemini-2.5-pro', 'gemini-1.5-pro', 'gemini-pro']
+    if _CACHED_WORKING_MODEL and _CACHED_WORKING_MODEL in all_models:
+        # Đưa cached model lên đầu để đạt tốc độ cao nhất, nhưng vẫn giữ các model khác phía sau để dự phòng khi Google quá tải (lỗi 503)
+        model_list = [_CACHED_WORKING_MODEL] + [m for m in all_models if m != _CACHED_WORKING_MODEL]
     else:
-        model_list = ['gemini-2.5-flash', 'gemini-1.5-flash', 'gemini-flash-latest']
+        model_list = all_models
     
     errors = []
     for model_name in model_list:
@@ -63,13 +65,13 @@ Nhiệm vụ của bạn:
                     max_output_tokens=500,
                 ),
             )
-            # Lưu lại model thành công để lần sau dùng ngay (tiết kiệm ~1.5s - 3s)
+            # Lưu lại model thành công để lần sau ưu tiên dùng trước
             _CACHED_WORKING_MODEL = model_name
             return response.text
         except Exception as e:
             errors.append(f"{model_name}: {str(e)}")
             continue
             
-    # Nếu model cache bị lỗi, reset cache để quét lại
+    # Nếu tất cả các model đều lỗi
     _CACHED_WORKING_MODEL = None
     return f"Xin lỗi, có lỗi kết nối tới AI.\n\nChi tiết lỗi của từng model:\n" + "\n".join(errors)

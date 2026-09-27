@@ -56,6 +56,8 @@ def _exam_status_label(exam) -> str:
 
 
 def render_student_flow():
+    ui_style.inject_global_css()
+
     # 1. Thử khôi phục session từ URL (để học sinh F5 không bị mất session)
     if not st.session_state.get(f"{_STATE_PREFIX}student_id"):
         token = st.query_params.get("student_session")

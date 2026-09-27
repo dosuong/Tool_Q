@@ -371,7 +371,10 @@ def inject_global_css():
             /* ====== TAB NGANG DANH SÁCH CÂU (Trang Làm bài của HS & Các tab chung trong app) ======
                Biến các tab nhỏ phẳng mặc định thành các NÚT THẺ NỔI (Pill Cards) to, rõ nét,
                nổi bật 100% khi active, dễ nhìn và chống bấm nhầm trên di động/máy tính. */
-            div[data-testid="stTabs"] [data-baseweb="tab-list"] {
+            div[data-testid="stTabs"] [data-baseweb="tab-list"],
+            div[data-testid="stTabs"] [role="tablist"],
+            [data-baseweb="tab-list"],
+            [role="tablist"] {
                 gap: 12px !important;
                 margin-bottom: 20px !important;
                 background-color: #F1F5F9 !important;
@@ -380,8 +383,13 @@ def inject_global_css():
                 border: 2px solid #CBD5E1 !important;
             }
 
-            div[data-testid="stTabs"] button[data-baseweb="tab"] {
+            div[data-testid="stTabs"] [data-baseweb="tab"],
+            div[data-testid="stTabs"] [role="tab"],
+            button[data-baseweb="tab"],
+            div[data-baseweb="tab"],
+            [role="tab"] {
                 padding: 14px 32px !important;
+                height: auto !important;
                 border-radius: 10px !important;
                 background-color: #FFFFFF !important;
                 border: 2px solid #94A3B8 !important;
@@ -389,42 +397,58 @@ def inject_global_css():
                 box-shadow: 0 2px 4px rgba(0, 0, 0, 0.06) !important;
             }
 
-            div[data-testid="stTabs"] button[data-baseweb="tab"] p,
-            div[data-testid="stTabs"] button[data-baseweb="tab"] div,
-            div[data-testid="stTabs"] button[data-baseweb="tab"] span {
+            div[data-testid="stTabs"] [data-baseweb="tab"] *,
+            div[data-testid="stTabs"] [role="tab"] *,
+            [data-baseweb="tab"] *,
+            [role="tab"] * {
                 font-size: 1.3rem !important;
                 font-weight: 800 !important;
                 color: #1E293B !important;
             }
 
-            div[data-testid="stTabs"] button[data-baseweb="tab"]:hover {
+            div[data-testid="stTabs"] [data-baseweb="tab"]:hover,
+            div[data-testid="stTabs"] [role="tab"]:hover,
+            [data-baseweb="tab"]:hover,
+            [role="tab"]:hover {
                 background-color: #DBEAFE !important;
-                border-color: #3B82F6 !important;
+                border-color: #2563EB !important;
                 transform: translateY(-2px) !important;
             }
 
-            div[data-testid="stTabs"] button[data-baseweb="tab"]:hover p,
-            div[data-testid="stTabs"] button[data-baseweb="tab"]:hover div,
-            div[data-testid="stTabs"] button[data-baseweb="tab"]:hover span {
+            div[data-testid="stTabs"] [data-baseweb="tab"]:hover *,
+            div[data-testid="stTabs"] [role="tab"]:hover *,
+            [data-baseweb="tab"]:hover *,
+            [role="tab"]:hover * {
                 color: #1D4ED8 !important;
             }
 
-            div[data-testid="stTabs"] button[data-baseweb="tab"][aria-selected="true"] {
+            div[data-testid="stTabs"] [aria-selected="true"],
+            div[data-testid="stTabs"] [data-baseweb="tab"][aria-selected="true"],
+            div[data-testid="stTabs"] [role="tab"][aria-selected="true"],
+            [data-baseweb="tab"][aria-selected="true"],
+            [role="tab"][aria-selected="true"] {
                 background-color: #2563EB !important;
                 border-color: #2563EB !important;
                 box-shadow: 0 4px 14px rgba(37, 99, 235, 0.45) !important;
                 transform: translateY(-2px) !important;
             }
 
-            div[data-testid="stTabs"] button[data-baseweb="tab"][aria-selected="true"] p,
-            div[data-testid="stTabs"] button[data-baseweb="tab"][aria-selected="true"] div,
-            div[data-testid="stTabs"] button[data-baseweb="tab"][aria-selected="true"] span {
+            div[data-testid="stTabs"] [aria-selected="true"] *,
+            div[data-testid="stTabs"] [data-baseweb="tab"][aria-selected="true"] *,
+            div[data-testid="stTabs"] [role="tab"][aria-selected="true"] *,
+            [data-baseweb="tab"][aria-selected="true"] *,
+            [role="tab"][aria-selected="true"] * {
                 color: #FFFFFF !important;
             }
 
             /* Ẩn gạch chân mỏng cũ vì đã dùng Pill Card nổi */
-            div[data-testid="stTabs"] [data-baseweb="tab-highlight"] {
+            div[data-testid="stTabs"] [data-baseweb="tab-highlight"],
+            [data-baseweb="tab-highlight"],
+            div[data-testid="stTabs"] [data-baseweb="tab-border"],
+            [data-baseweb="tab-border"] {
                 display: none !important;
+                visibility: hidden !important;
+                height: 0 !important;
             }
         </style>
         """,

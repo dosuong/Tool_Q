@@ -1,4 +1,5 @@
 import os
+import time
 import streamlit as st
 from google import genai
 from google.genai import types
@@ -45,32 +46,42 @@ Nhiệm vụ của bạn:
     # Message mới nhất của user
     contents.append({"role": "user", "parts": [{"text": user_message}]})
 
-    # Danh sách model dự phòng theo thứ tự ưu tiên
-    all_models = ['gemini-2.5-flash', 'gemini-1.5-flash', 'gemini-flash-latest', 'gemini-2.5-pro', 'gemini-1.5-pro', 'gemini-pro']
+    # Danh sách các model đang hoạt động theo hướng dẫn mới nhất từ Google API
+    all_models = [
+        'gemini-3.8-flash',
+        'gemini-3.5-flash',
+        'gemini-flash-latest',
+        'gemini-3.1-pro-preview',
+    ]
     if _CACHED_WORKING_MODEL and _CACHED_WORKING_MODEL in all_models:
-        # Đưa cached model lên đầu để đạt tốc độ cao nhất, nhưng vẫn giữ các model khác phía sau để dự phòng khi Google quá tải (lỗi 503)
         model_list = [_CACHED_WORKING_MODEL] + [m for m in all_models if m != _CACHED_WORKING_MODEL]
     else:
         model_list = all_models
     
     errors = []
     for model_name in model_list:
-        try:
-            response = client.models.generate_content(
-                model=model_name,
-                contents=contents,
-                config=types.GenerateContentConfig(
-                    system_instruction=system_prompt,
-                    temperature=0.5,
-                    max_output_tokens=500,
-                ),
-            )
-            # Lưu lại model thành công để lần sau ưu tiên dùng trước
-            _CACHED_WORKING_MODEL = model_name
-            return response.text
-        except Exception as e:
-            errors.append(f"{model_name}: {str(e)}")
-            continue
+        for attempt in range(2):
+            try:
+                response = client.models.generate_content(
+                    model=model_name,
+                    contents=contents,
+                    config=types.GenerateContentConfig(
+                        system_instruction=system_prompt,
+                        temperature=0.5,
+                        max_output_tokens=500,
+                    ),
+                )
+                # Lưu lại model thành công để lần sau ưu tiên dùng trước
+                _CACHED_WORKING_MODEL = model_name
+                return response.text
+            except Exception as e:
+                err_str = str(e)
+                # Nếu gặp lỗi 503 (quá tải tạm thời), thử lại sau 0.3s trước khi chuyển model
+                if "503" in err_str and attempt == 0:
+                    time.sleep(0.3)
+                    continue
+                errors.append(f"{model_name}: {err_str}")
+                break
             
     # Nếu tất cả các model đều lỗi
     _CACHED_WORKING_MODEL = None

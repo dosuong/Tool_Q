@@ -368,19 +368,54 @@ def inject_global_css():
                 color: #16A34A !important;
             }
 
-            /* ====== Tab ngang danh sách câu (trang Làm bài của HS) — giãn cách + tăng vùng
-               bấm, mặc định Streamlit hơi sát nhau, dễ bấm nhầm câu khác trên di động ====== */
+            /* ====== TAB NGANG DANH SÁCH CÂU (Trang Làm bài của HS) ======
+               Biến các tab nhỏ phẳng mặc định thành các NÚT THẺ NỔI (Pill Cards) to, rõ nét,
+               nổi bật 100% khi active, dễ nhìn và chống bấm nhầm trên di động/máy tính. */
             [data-baseweb="tab-list"] {
-                gap: 6px !important;
-                margin-bottom: 10px !important;
+                gap: 10px !important;
+                margin-bottom: 18px !important;
+                background-color: #F8FAFC !important;
+                padding: 8px 12px !important;
+                border-radius: 14px !important;
+                border: 1px solid #E2E8F0 !important;
             }
+
             button[data-baseweb="tab"] {
-                padding: 10px 22px !important;
-                font-size: 1.05rem !important;
-                font-weight: 600 !important;
+                padding: 12px 26px !important;
+                font-size: 1.15rem !important;
+                font-weight: 700 !important;
+                border-radius: 10px !important;
+                background-color: #FFFFFF !important;
+                border: 1px solid #CBD5E1 !important;
+                color: #475569 !important;
+                transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
+                box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05) !important;
             }
+
+            button[data-baseweb="tab"]:hover {
+                background-color: #DBEAFE !important;
+                color: #1D4ED8 !important;
+                border-color: #93C5FD !important;
+                transform: translateY(-1px) !important;
+            }
+
+            button[data-baseweb="tab"][aria-selected="true"] {
+                background-color: #2563EB !important;
+                color: #FFFFFF !important;
+                border-color: #2563EB !important;
+                font-weight: 800 !important;
+                box-shadow: 0 4px 12px rgba(37, 99, 235, 0.35) !important;
+                transform: translateY(-2px) !important;
+            }
+
+            button[data-baseweb="tab"][aria-selected="true"] p,
+            button[data-baseweb="tab"][aria-selected="true"] span {
+                color: #FFFFFF !important;
+            }
+
+            /* Ẩn gạch chân mỏng cũ vì đã dùng Pill Card nổi */
             [data-baseweb="tab-highlight"] {
-                height: 3px !important;
+                display: none !important;
             }
         </style>
         """,

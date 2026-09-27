@@ -331,6 +331,7 @@ def _render_problem_tab(index: int, exam, enrollment, problem: dict, read_only_a
                 else:
                     with st.spinner("Đang chấm thử..."):
                         result = grading.grade_problem(code_text, problem, sample_tcs)
+                    st.session_state[f"{pkey}_latest_trial_result"] = result
                     service.record_trial_submission(progress.id, submission_mode, code_text, original_filename, result)
                     _render_trial_result(result, sample_tcs)
 
@@ -369,7 +370,8 @@ def _render_problem_tab(index: int, exam, enrollment, problem: dict, read_only_a
 
     if col_chat is not None:
         with col_chat:
-            _render_ai_chat_panel(exam, enrollment, problem, code_text, pkey)
+            latest_trial = st.session_state.get(f"{pkey}_latest_trial_result")
+            _render_ai_chat_panel(exam, enrollment, problem, code_text, pkey, latest_trial)
 
     if progress.best_submission_id:
         # KHÔNG dùng lại mẹo "chỉ query khi expander đang mở": st.expander(key=...) KHÔNG ghi
@@ -524,10 +526,11 @@ def _render_official_review(submission_id: int, problem: dict, sample_tcs: list[
             st.code(submission.code_text, language="python")
 
 
-def _render_ai_chat_panel(exam, enrollment, problem: dict, code_text: str, pkey: str):
+def _render_ai_chat_panel(exam, enrollment, problem: dict, code_text: str, pkey: str, trial_result: dict | None = None):
     """Bảng điều khiển AI Chatbox (cột bên phải).
     Được tối ưu chiều cao 280px để nằm vừa vặn song song với khung Code Editor (100% zoom không cần cuộn trang).
-    Tin nhắn User nằm bên PHẢI, AI nằm bên TRÁI. Spinner 'AI đang suy nghĩ' nằm trực tiếp trong khung chat."""
+    Tin nhắn User nằm bên PHẢI, AI nằm bên TRÁI. Spinner 'AI đang suy nghĩ' nằm trực tiếp trong khung chat.
+    Truyền trial_result giúp AI đọc được toàn bộ log lỗi chạy thử gần nhất của học sinh."""
     chat_key = f"{_STATE_PREFIX}chat_{enrollment.id}_{problem['id']}"
     if chat_key not in st.session_state:
         st.session_state[chat_key] = []
@@ -586,7 +589,8 @@ def _render_ai_chat_panel(exam, enrollment, problem: dict, code_text: str, pkey:
                     from online_exam.ai_service import ask_ai_tutor
                     ai_response = ask_ai_tutor(
                         problem, code_text,
-                        st.session_state[chat_key], pending_prompt
+                        st.session_state[chat_key], pending_prompt,
+                        trial_result=trial_result
                     )
             
             # 3. Lưu kết quả và dọn dẹp pending state

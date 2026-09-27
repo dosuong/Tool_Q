@@ -6,9 +6,9 @@ from google.genai import types
 
 _CACHED_WORKING_MODEL = None
 
-def ask_ai_tutor(problem: dict, student_code: str, chat_history: list, user_message: str) -> str:
+def ask_ai_tutor(problem: dict, student_code: str, chat_history: list, user_message: str, trial_result: dict | None = None) -> str:
     """Gọi Google Gemini API (bản mới nhất google-genai) để gợi ý học sinh.
-    Đã được tối ưu tốc độ phản hồi bằng cách cache model thành công và giới hạn max_output_tokens."""
+    Đã bổ sung đọc kết quả/lỗi chạy thử gần nhất (trial_result) để gia sư AI biết chính xác lỗi sai."""
     global _CACHED_WORKING_MODEL
 
     api_key = os.environ.get("GEMINI_API_KEY")
@@ -21,6 +21,19 @@ def ask_ai_tutor(problem: dict, student_code: str, chat_history: list, user_mess
 
     client = genai.Client(api_key=api_key)
 
+    trial_info = ""
+    if trial_result:
+        trial_info = "\n[KẾT QUẢ CHẠY THỬ GẦN NHẤT CỦA HỌC SINH]\n"
+        if not trial_result.get("structure_ok"):
+            trial_info += f"- Lỗi vi phạm cấu trúc: {'; '.join(trial_result.get('violations', []))}\n"
+        else:
+            trial_info += f"- Tỉ lệ test mẫu đạt: {trial_result.get('pass_ratio', 0) * 100:.0f}%\n"
+            for i, r in enumerate(trial_result.get("results", []), start=1):
+                status = "ĐẠT" if r.get("passed") else "CHƯA ĐẠT"
+                actual = r.get("actual_output") or ""
+                err = r.get("error_message") or ""
+                trial_info += f"  + Test mẫu {i}: {status} | Thực tế in ra: '{actual}' | Lỗi hệ thống: '{err}'\n"
+
     system_prompt = f"""Bạn là một gia sư dạy lập trình Python tận tâm.
 Đề bài học sinh đang giải: {problem.get('title')}
 Mô tả đề bài: {problem.get('description')}
@@ -28,9 +41,9 @@ Code hiện tại của học sinh:
 ```python
 {student_code}
 ```
-
+{trial_info}
 Nhiệm vụ của bạn:
-1. Giải đáp câu hỏi của học sinh về đoạn code trên.
+1. Giải đáp câu hỏi của học sinh về đoạn code trên và dựa vào [KẾT QUẢ CHẠY THỬ GẦN NHẤT] ở trên (nếu có) để chỉ ra nguyên nhân bài chưa đạt hoặc bị lỗi.
 2. Hướng dẫn học sinh tự tìm ra lỗi sai hoặc hướng giải.
 3. TUYỆT ĐỐI KHÔNG viết sẵn code giải hoàn chỉnh hoặc đưa ra đáp án trực tiếp. 
 4. Chỉ đưa ra gợi ý ngắn gọn, giải thích khái niệm, hoặc cung cấp đoạn mã giả (pseudo-code) cực kỳ ngắn gọn nếu thật sự cần thiết.

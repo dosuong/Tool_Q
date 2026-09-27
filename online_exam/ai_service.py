@@ -1,3 +1,8 @@
+import os
+import streamlit as st
+from google import genai
+from google.genai import types
+
 _CACHED_WORKING_MODEL = None
 
 def ask_ai_tutor(problem: dict, student_code: str, chat_history: list, user_message: str) -> str:

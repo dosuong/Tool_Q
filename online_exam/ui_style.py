@@ -368,53 +368,62 @@ def inject_global_css():
                 color: #16A34A !important;
             }
 
-            /* ====== TAB NGANG DANH SÁCH CÂU (Trang Làm bài của HS) ======
+            /* ====== TAB NGANG DANH SÁCH CÂU (Trang Làm bài của HS & Các tab chung trong app) ======
                Biến các tab nhỏ phẳng mặc định thành các NÚT THẺ NỔI (Pill Cards) to, rõ nét,
                nổi bật 100% khi active, dễ nhìn và chống bấm nhầm trên di động/máy tính. */
-            [data-baseweb="tab-list"] {
-                gap: 10px !important;
-                margin-bottom: 18px !important;
-                background-color: #F8FAFC !important;
-                padding: 8px 12px !important;
+            div[data-testid="stTabs"] [data-baseweb="tab-list"] {
+                gap: 12px !important;
+                margin-bottom: 20px !important;
+                background-color: #F1F5F9 !important;
+                padding: 10px 14px !important;
                 border-radius: 14px !important;
-                border: 1px solid #E2E8F0 !important;
+                border: 2px solid #CBD5E1 !important;
             }
 
-            button[data-baseweb="tab"] {
-                padding: 12px 26px !important;
-                font-size: 1.15rem !important;
-                font-weight: 700 !important;
+            div[data-testid="stTabs"] button[data-baseweb="tab"] {
+                padding: 14px 32px !important;
                 border-radius: 10px !important;
                 background-color: #FFFFFF !important;
-                border: 1px solid #CBD5E1 !important;
-                color: #475569 !important;
+                border: 2px solid #94A3B8 !important;
                 transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
-                box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05) !important;
+                box-shadow: 0 2px 4px rgba(0, 0, 0, 0.06) !important;
             }
 
-            button[data-baseweb="tab"]:hover {
-                background-color: #DBEAFE !important;
-                color: #1D4ED8 !important;
-                border-color: #93C5FD !important;
-                transform: translateY(-1px) !important;
-            }
-
-            button[data-baseweb="tab"][aria-selected="true"] {
-                background-color: #2563EB !important;
-                color: #FFFFFF !important;
-                border-color: #2563EB !important;
+            div[data-testid="stTabs"] button[data-baseweb="tab"] p,
+            div[data-testid="stTabs"] button[data-baseweb="tab"] div,
+            div[data-testid="stTabs"] button[data-baseweb="tab"] span {
+                font-size: 1.3rem !important;
                 font-weight: 800 !important;
-                box-shadow: 0 4px 12px rgba(37, 99, 235, 0.35) !important;
+                color: #1E293B !important;
+            }
+
+            div[data-testid="stTabs"] button[data-baseweb="tab"]:hover {
+                background-color: #DBEAFE !important;
+                border-color: #3B82F6 !important;
                 transform: translateY(-2px) !important;
             }
 
-            button[data-baseweb="tab"][aria-selected="true"] p,
-            button[data-baseweb="tab"][aria-selected="true"] span {
+            div[data-testid="stTabs"] button[data-baseweb="tab"]:hover p,
+            div[data-testid="stTabs"] button[data-baseweb="tab"]:hover div,
+            div[data-testid="stTabs"] button[data-baseweb="tab"]:hover span {
+                color: #1D4ED8 !important;
+            }
+
+            div[data-testid="stTabs"] button[data-baseweb="tab"][aria-selected="true"] {
+                background-color: #2563EB !important;
+                border-color: #2563EB !important;
+                box-shadow: 0 4px 14px rgba(37, 99, 235, 0.45) !important;
+                transform: translateY(-2px) !important;
+            }
+
+            div[data-testid="stTabs"] button[data-baseweb="tab"][aria-selected="true"] p,
+            div[data-testid="stTabs"] button[data-baseweb="tab"][aria-selected="true"] div,
+            div[data-testid="stTabs"] button[data-baseweb="tab"][aria-selected="true"] span {
                 color: #FFFFFF !important;
             }
 
             /* Ẩn gạch chân mỏng cũ vì đã dùng Pill Card nổi */
-            [data-baseweb="tab-highlight"] {
+            div[data-testid="stTabs"] [data-baseweb="tab-highlight"] {
                 display: none !important;
             }
         </style>

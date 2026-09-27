@@ -526,31 +526,77 @@ def _render_official_review(submission_id: int, problem: dict, sample_tcs: list[
 
 def _render_ai_chat_panel(exam, enrollment, problem: dict, code_text: str, pkey: str):
     """Bảng điều khiển AI Chatbox (cột bên phải).
-    Nằm bên trong `@st.fragment` của `_render_problem_tab` nên khi gửi tin nhắn,
-    chỉ có riêng tab này chạy lại — tuyệt đối không đơ/xám toàn trang."""
+    Được tối ưu chiều cao 280px để nằm vừa vặn song song với khung Code Editor (100% zoom không cần cuộn trang).
+    Tin nhắn User nằm bên PHẢI, AI nằm bên TRÁI. Spinner 'AI đang suy nghĩ' nằm trực tiếp trong khung chat."""
     chat_key = f"{_STATE_PREFIX}chat_{enrollment.id}_{problem['id']}"
     if chat_key not in st.session_state:
         st.session_state[chat_key] = []
 
+    # CSS Tùy chỉnh: Đưa tin nhắn User sang bên PHẢI, AI sang bên TRÁI
+    st.markdown("""
+    <style>
+    /* Tin nhắn User: Đưa sang bên PHẢI, bong bóng màu xanh nhạt */
+    div[data-testid="stChatMessage"]:has([data-testid="stChatMessageAvatarUser"]),
+    div[data-testid="stChatMessage"]:has(div[aria-label="Chat message from user"]),
+    div[data-testid="stChatMessage"]:has(span[aria-label="user"]) {
+        flex-direction: row-reverse !important;
+        text-align: right !important;
+    }
+    div[data-testid="stChatMessage"]:has([data-testid="stChatMessageAvatarUser"]) div[data-testid="stChatMessageContent"],
+    div[data-testid="stChatMessage"]:has(div[aria-label="Chat message from user"]) div[data-testid="stChatMessageContent"] {
+        background-color: #e3f2fd !important;
+        border-radius: 14px 14px 2px 14px !important;
+        padding: 8px 12px !important;
+        color: #0d47a1 !important;
+    }
+    /* Tin nhắn AI: Ở bên TRÁI, bong bóng màu xám viền nhẹ */
+    div[data-testid="stChatMessage"]:has([data-testid="stChatMessageAvatarAssistant"]) div[data-testid="stChatMessageContent"],
+    div[data-testid="stChatMessage"]:has(div[aria-label="Chat message from assistant"]) div[data-testid="stChatMessageContent"] {
+        background-color: #f8f9fa !important;
+        border-radius: 14px 14px 14px 2px !important;
+        border: 1px solid #e9ecef !important;
+        padding: 8px 12px !important;
+    }
+    </style>
+    """, unsafe_allow_html=True)
+
     st.markdown("##### 🤖 Trợ lý AI (Gia sư ảo)")
 
-    # Khung cuộn chứa các tin nhắn — tự động hiển thị tin nhắn mới ở dưới cùng
-    with st.container(height=450, border=True):
-        if not st.session_state[chat_key]:
+    pending_key = f"{pkey}_pending_prompt"
+
+    # Khung cuộn chứa các tin nhắn — chiều cao 280px khớp hoàn hảo với chiều cao nút Nộp bài bên trái
+    with st.container(height=280, border=True):
+        if not st.session_state[chat_key] and not st.session_state.get(pending_key):
             st.caption("💬 Chưa có tin nhắn nào. Bạn hãy nhập câu hỏi bên dưới để hỏi AI gợi ý nhé!")
+        
+        # Hiển thị lịch sử tin nhắn đã lưu
         for msg in st.session_state[chat_key]:
             with st.chat_message(msg["role"]):
                 st.markdown(msg["content"])
 
+        # Nếu có tin nhắn vừa nhập đang chờ xử lý
+        if pending_prompt := st.session_state.get(pending_key):
+            # 1. Hiển thị ngay câu hỏi của user ở bên phải
+            with st.chat_message("user"):
+                st.markdown(pending_prompt)
+            
+            # 2. Hiển thị spinner "AI đang suy nghĩ" TRỰC TIẾP bên trong khung chat
+            with st.chat_message("assistant"):
+                with st.spinner("AI đang suy nghĩ..."):
+                    from online_exam.ai_service import ask_ai_tutor
+                    ai_response = ask_ai_tutor(
+                        problem, code_text,
+                        st.session_state[chat_key], pending_prompt
+                    )
+            
+            # 3. Lưu kết quả và dọn dẹp pending state
+            st.session_state[chat_key].append({"role": "user", "content": pending_prompt})
+            st.session_state[chat_key].append({"role": "assistant", "content": ai_response})
+            st.session_state.pop(pending_key, None)
+            st.rerun(scope="fragment")
+
     # Ô nhập tin nhắn
     if user_prompt := st.chat_input("Hỏi AI gợi ý về code...", key=f"{pkey}_ai_input"):
-        st.session_state[chat_key].append({"role": "user", "content": user_prompt})
-        with st.spinner("AI đang suy nghĩ..."):
-            from online_exam.ai_service import ask_ai_tutor
-            ai_response = ask_ai_tutor(
-                problem, code_text,
-                st.session_state[chat_key][:-1], user_prompt
-            )
-        st.session_state[chat_key].append({"role": "assistant", "content": ai_response})
+        st.session_state[pending_key] = user_prompt
         st.rerun(scope="fragment")
 

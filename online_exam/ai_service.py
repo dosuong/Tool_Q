@@ -38,13 +38,17 @@ Nhiệm vụ của bạn:
 """
 
     contents = []
-    # Khởi tạo history messages
+    # Khởi tạo history messages (Lọc bỏ các tin nhắn rỗng hoặc "None" để không làm lỗi Google API)
     for msg in chat_history:
-        role = "model" if msg["role"] == "assistant" else "user"
-        contents.append({"role": role, "parts": [{"text": msg["content"]}]})
+        role = "model" if msg.get("role") == "assistant" else "user"
+        text_content = str(msg.get("content") or "").strip()
+        if text_content and text_content != "None":
+            contents.append({"role": role, "parts": [{"text": text_content}]})
     
     # Message mới nhất của user
-    contents.append({"role": "user", "parts": [{"text": user_message}]})
+    clean_user_message = str(user_message or "").strip()
+    if clean_user_message:
+        contents.append({"role": "user", "parts": [{"text": clean_user_message}]})
 
     # Danh sách các model đang hoạt động theo hướng dẫn mới nhất từ Google API
     all_models = [

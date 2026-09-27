@@ -58,10 +58,24 @@ def inject_global_css():
                 font-weight: 500 !important;
             }
 
-            /* Chữ báo lỗi đậm/đỏ rõ hơn mặc định của Streamlit */
-            div[data-testid="stAlert"] p,
-            div[data-testid="stAlertContentError"] p,
-            div[data-testid="stAlertContentError"] {
+            /* Phân loại màu chữ chuẩn cho từng loại thông báo (Success=Xanh lá, Info=Xanh dương, Warning=Vàng, Error=Đỏ) */
+            div[data-testid="stAlert"]:has(div[data-testid="stAlertContentSuccess"]) p,
+            div[data-testid="stAlertContentSuccess"] p, div[data-testid="stAlertContentSuccess"] {
+                color: #15803D !important;
+                font-weight: 600 !important;
+            }
+            div[data-testid="stAlert"]:has(div[data-testid="stAlertContentInfo"]) p,
+            div[data-testid="stAlertContentInfo"] p, div[data-testid="stAlertContentInfo"] {
+                color: #1D4ED8 !important;
+                font-weight: 600 !important;
+            }
+            div[data-testid="stAlert"]:has(div[data-testid="stAlertContentWarning"]) p,
+            div[data-testid="stAlertContentWarning"] p, div[data-testid="stAlertContentWarning"] {
+                color: #B45309 !important;
+                font-weight: 600 !important;
+            }
+            div[data-testid="stAlert"]:has(div[data-testid="stAlertContentError"]) p,
+            div[data-testid="stAlertContentError"] p, div[data-testid="stAlertContentError"] {
                 color: #B91C1C !important;
                 font-weight: 600 !important;
             }

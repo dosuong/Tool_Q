@@ -378,7 +378,7 @@ def _render_problem_tab(index: int, total_problems: int, exam, enrollment, probl
     if col_chat is not None:
         with col_chat:
             latest_trial = st.session_state.get(f"{pkey}_latest_trial_result")
-            _render_ai_chat_panel(exam, enrollment, problem, code_text, pkey, latest_trial)
+            _render_ai_chat_panel(exam, enrollment, problem, code_text, pkey, latest_trial, sample_tcs)
 
     if progress.best_submission_id:
         # KHÔNG dùng lại mẹo "chỉ query khi expander đang mở": st.expander(key=...) KHÔNG ghi
@@ -469,7 +469,9 @@ def _render_code_input(exam, pkey: str, progress):
 import html
 
 def _build_sample_test_cases_preview_html(sample_tcs: list[dict]) -> str:
-    table_html = """<style>
+    table_html = """<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" />
+<style>
+.material-symbols-rounded { font-family: 'Material Symbols Rounded'; font-weight: normal; font-style: normal; font-size: 20px; line-height: 1; letter-spacing: normal; text-transform: none; display: inline-block; white-space: nowrap; word-wrap: normal; direction: ltr; -webkit-font-smoothing: antialiased; }
 .sample-tc-table { width: 100%; border-collapse: collapse; margin-top: 8px; margin-bottom: 16px; font-size: 0.95rem; }
 .sample-tc-table th, .sample-tc-table td { border: 1px solid #e2e8f0; padding: 10px; text-align: left; }
 .sample-tc-table th { background-color: #f1f5f9; font-weight: 600; color: #1e293b; }
@@ -628,11 +630,12 @@ def _render_official_review(submission_id: int, problem: dict, sample_tcs: list[
             st.code(submission.code_text, language="python")
 
 
-def _render_ai_chat_panel(exam, enrollment, problem: dict, code_text: str, pkey: str, trial_result: dict | None = None):
+def _render_ai_chat_panel(exam, enrollment, problem: dict, code_text: str, pkey: str, trial_result: dict | None = None, sample_tcs: list | None = None):
     """Bảng điều khiển AI Chatbox (cột bên phải).
     Được tối ưu chiều cao 280px để nằm vừa vặn song song với khung Code Editor (100% zoom không cần cuộn trang).
     Tin nhắn User nằm bên PHẢI, AI nằm bên TRÁI. Spinner 'AI đang suy nghĩ' nằm trực tiếp trong khung chat.
-    Truyền trial_result giúp AI đọc được toàn bộ log lỗi chạy thử gần nhất của học sinh."""
+    Truyền trial_result giúp AI đọc được toàn bộ log lỗi chạy thử gần nhất của học sinh.
+    Truyền sample_tcs giúp AI biết trước test case mẫu ngay cả khi chưa chạy thử."""
     chat_key = f"{_STATE_PREFIX}chat_{enrollment.id}_{problem['id']}"
     if chat_key not in st.session_state:
         st.session_state[chat_key] = []
@@ -692,7 +695,8 @@ def _render_ai_chat_panel(exam, enrollment, problem: dict, code_text: str, pkey:
                     ai_response = ask_ai_tutor(
                         problem, code_text,
                         st.session_state[chat_key], pending_prompt,
-                        trial_result=trial_result
+                        trial_result=trial_result,
+                        sample_tcs=sample_tcs,
                     )
             
             # 3. Lưu kết quả và dọn dẹp pending state

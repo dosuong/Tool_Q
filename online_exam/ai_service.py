@@ -6,9 +6,10 @@ from google.genai import types
 
 _CACHED_WORKING_MODEL = None
 
-def ask_ai_tutor(problem: dict, student_code: str, chat_history: list, user_message: str, trial_result: dict | None = None) -> str:
+def ask_ai_tutor(problem: dict, student_code: str, chat_history: list, user_message: str, trial_result: dict | None = None, sample_tcs: list | None = None) -> str:
     """Gọi Google Gemini API (bản mới nhất google-genai) để gợi ý học sinh.
-    Đã bổ sung đọc kết quả/lỗi chạy thử gần nhất (trial_result) để gia sư AI biết chính xác lỗi sai."""
+    Đã bổ sung đọc kết quả/lỗi chạy thử gần nhất (trial_result) để gia sư AI biết chính xác lỗi sai.
+    Đã bổ sung sample_tcs để AI biết trước test case mẫu của bài ngay cả khi chưa chạy thử."""
     global _CACHED_WORKING_MODEL
 
     api_key = os.environ.get("GEMINI_API_KEY")
@@ -20,6 +21,22 @@ def ask_ai_tutor(problem: dict, student_code: str, chat_history: list, user_mess
         return "Lỗi hệ thống: Chưa cấu hình GEMINI_API_KEY trong file .env hoặc st.secrets."
 
     client = genai.Client(api_key=api_key)
+
+    # Tóm tắt test case mẫu (luôn có, ngay cả trước khi chạy thử)
+    sample_tcs_info = ""
+    if sample_tcs:
+        sample_tcs_info = "\n[TEST CASE MẪU CỦA BÀI]\n"
+        for i, tc in enumerate(sample_tcs, start=1):
+            import json as _json
+            input_str = tc.get("input") or (
+                _json.dumps(tc.get("call_args"), ensure_ascii=False)
+                if tc.get("call_args") is not None else ""
+            )
+            expected_str = tc.get("expected_output") or (
+                _json.dumps(tc.get("expected_return"), ensure_ascii=False)
+                if tc.get("expected_return") is not None else ""
+            )
+            sample_tcs_info += f"  Test {i}: Input={repr(input_str)} | Expected={repr(expected_str)}\n"
 
     trial_info = ""
     if trial_result:
@@ -41,7 +58,7 @@ Code hiện tại của học sinh:
 ```python
 {student_code}
 ```
-{trial_info}
+{sample_tcs_info}{trial_info}
 
 HƯỚNG DẪN TRẢ LỜI (bắt buộc tuân thủ):
 1. Mỗi câu trả lời PHẢI HOÀN CHỈNH, không bao giờ bỏ lửng hoặc cắt ngang giữa chừng.
@@ -51,7 +68,8 @@ HƯỚNG DẪN TRẢ LỜI (bắt buộc tuân thủ):
 5. Dùng pseudo-code ngắn (2-3 dòng) chỉ khi thật sự cần thiết.
 6. Xưng hô là "Thầy/Cô" và gọi học sinh là "em".
 7. Luôn giữ thái độ động viên, tích cực.
-8. Nếu có [KẾT QUẢ CHẠY THỬ], hãy dùng đó để chỉ ra nguyên nhân cụ thể tại sao bài chưa đạt.
+8. Nếu có [TEST CASE MẪU], hãy dùng để giải thích input/output kỳ vọng khi cần.
+9. Nếu có [KẾT QUẢ CHẠY THỬ], hãy dùng đó để chỉ ra nguyên nhân cụ thể tại sao bài chưa đạt.
 """
 
     contents = []

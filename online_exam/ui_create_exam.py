@@ -341,7 +341,7 @@ def page_create_exam(teacher_id: int):
                                     else:
                                         generated.append({
                                             "id": None, "input": inp, "expected_output": out,
-                                            "is_sample": False, "timeout": 5, "note": f"case {idx}",
+                                            "is_sample": True, "timeout": 5, "note": f"case {idx}",
                                         })
                                 if not has_error:
                                     problem["test_cases"] = generated
@@ -385,7 +385,7 @@ def page_create_exam(teacher_id: int):
                                         generated.append({
                                             "id": None, "input": "", "expected_output": stdout_val,
                                             "call_args": call_args, "call_kwargs": {}, "expected_return": ret_val,
-                                            "is_sample": False, "timeout": 5, "note": f"case {idx}",
+                                            "is_sample": True, "timeout": 5, "note": f"case {idx}",
                                         })
                                 if not has_error and generated:
                                     problem["test_cases"] = generated

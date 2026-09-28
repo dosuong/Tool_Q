@@ -295,7 +295,8 @@ def _render_problem_tab(index: int, total_problems: int, exam, enrollment, probl
         header += f": {title}"
     st.markdown(f"#### {header}")
     if problem.get("description"):
-        st.markdown(problem["description"])
+        desc = problem["description"].replace("\r\n", "\n").replace("\n", "  \n")
+        st.markdown(desc)
     st.divider()
 
     sample_tcs = [tc for tc in problem["test_cases"] if tc.get("is_sample")]
@@ -310,6 +311,9 @@ def _render_problem_tab(index: int, total_problems: int, exam, enrollment, probl
     m1.metric("Điểm tối đa", f"{problem['max_score']:.2f}")
     m2.metric("Lượt nộp còn lại", attempts_left_txt)
     m3.metric("Điểm cao nhất hiện tại", best_txt)
+
+    if sample_tcs:
+        st.markdown(_build_sample_test_cases_preview_html(sample_tcs), unsafe_allow_html=True)
 
     attempts_exhausted = max_attempts is not None and progress.attempts_used >= max_attempts
     is_locked = read_only_all or attempts_exhausted
@@ -464,6 +468,47 @@ def _render_code_input(exam, pkey: str, progress):
 
 import html
 
+def _build_sample_test_cases_preview_html(sample_tcs: list[dict]) -> str:
+    table_html = """<style>
+.sample-tc-table { width: 100%; border-collapse: collapse; margin-top: 8px; margin-bottom: 16px; font-size: 0.95rem; }
+.sample-tc-table th, .sample-tc-table td { border: 1px solid #e2e8f0; padding: 10px; text-align: left; }
+.sample-tc-table th { background-color: #f1f5f9; font-weight: 600; color: #1e293b; }
+.sample-tc-table tr:nth-child(even) { background-color: #f8fafc; }
+.code-font { font-family: monospace; white-space: pre-wrap; }
+</style>
+<div style="font-weight: 700; margin-top: 10px; margin-bottom: 4px; color: #1e293b;">📌 Test case mẫu:</div>
+<table class="sample-tc-table">
+<thead>
+<tr>
+<th style="width: 8%;">#</th>
+<th style="width: 46%;">Dữ liệu vào (Input)</th>
+<th style="width: 46%;">Mong đợi (Output / Return)</th>
+</tr>
+</thead>
+<tbody>
+"""
+    for i, tc in enumerate(sample_tcs, start=1):
+        input_txt = tc.get("input") or (
+            json.dumps(tc.get("call_args"), ensure_ascii=False)
+            if tc.get("call_args") is not None else ""
+        )
+        input_html = f"<div class='code-font'>{html.escape(input_txt)}</div>"
+
+        expected_txt = tc.get("expected_output") or (
+            json.dumps(tc.get("expected_return"), ensure_ascii=False)
+            if tc.get("expected_return") is not None else ""
+        )
+        expected_html = f"<div class='code-font'>{html.escape(expected_txt)}</div>"
+
+        table_html += f"""<tr>
+<td><strong>{i}</strong></td>
+<td>{input_html}</td>
+<td>{expected_html}</td>
+</tr>
+"""
+    table_html += "</tbody></table>"
+    return table_html
+
 def _build_results_table_html(test_cases: list[dict], results_by_tc_id: dict) -> str:
     """CHỈ ĐƯỢC gọi với test case MẪU (is_sample=True) — bảng này hiện chi tiết đầy đủ (mong
     đợi/thực tế/đạt-hay-không) cho từng dòng, không có cơ chế che giấu. Test ẩn phải được lọc
@@ -483,10 +528,11 @@ def _build_results_table_html(test_cases: list[dict], results_by_tc_id: dict) ->
 <table class="result-table">
 <thead>
 <tr>
-<th style="width: 10%;">Test</th>
-<th style="width: 35%;">Mong đợi</th>
-<th style="width: 35%;">Thực tế</th>
-<th style="width: 20%;">Kết quả</th>
+<th style="width: 8%;">Test</th>
+<th style="width: 28%;">Dữ liệu vào (Input)</th>
+<th style="width: 28%;">Mong đợi</th>
+<th style="width: 24%;">Thực tế</th>
+<th style="width: 12%;">Kết quả</th>
 </tr>
 </thead>
 <tbody>
@@ -503,6 +549,12 @@ def _build_results_table_html(test_cases: list[dict], results_by_tc_id: dict) ->
         text_class = "text-pass" if passed else "text-fail"
         result_text = "Đạt" if passed else "Chưa đạt"
 
+        input_txt = tc.get("input") or (
+            json.dumps(tc.get("call_args"), ensure_ascii=False)
+            if tc.get("call_args") is not None else ""
+        )
+        input_html = f"<div class='code-font'>{html.escape(input_txt)}</div>"
+
         actual = res.get('actual_output') or ""
         error_msg = res.get('error_message') or ""
         actual_display = actual.strip()
@@ -518,6 +570,7 @@ def _build_results_table_html(test_cases: list[dict], results_by_tc_id: dict) ->
 
         table_html += f"""<tr class="{row_class}">
 <td>{i}</td>
+<td>{input_html}</td>
 <td>{expected_html}</td>
 <td>{actual_html}</td>
 <td class="{text_class}">{result_text}</td>

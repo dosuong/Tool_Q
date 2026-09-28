@@ -160,6 +160,53 @@ def list_exams(teacher_id: int, class_id: int | None = None, include_archived: b
         return list(session.execute(stmt).scalars().all())
 
 
+@st.cache_data(ttl=_READ_CACHE_TTL, show_spinner=False)
+def list_problems_for_bank(teacher_id: int) -> list[dict]:
+    """Lấy tất cả câu hỏi (kèm test case mẫu) từ mọi bài kiểm tra của GV — dùng cho
+    tính năng Ngân hàng câu hỏi: GV có thể tái sử dụng câu cũ vào đề mới.
+    Reset id→None để khi thêm vào đề mới sẽ được tạo bản sao (INSERT), không ghi đè bản gốc."""
+    with get_session() as session:
+        # Lấy tất cả exam_id thuộc GV này
+        exam_ids = session.execute(
+            select(Exam.id).where(Exam.teacher_id == teacher_id)
+        ).scalars().all()
+        if not exam_ids:
+            return []
+        problems = session.execute(
+            select(ExamProblem)
+            .where(ExamProblem.exam_id.in_(exam_ids))
+            .order_by(ExamProblem.exam_id.desc(), ExamProblem.order_index)
+        ).scalars().all()
+        if not problems:
+            return []
+        test_cases = session.execute(
+            select(ExamTestCase)
+            .where(ExamTestCase.problem_id.in_([p.id for p in problems]))
+            .order_by(ExamTestCase.order_index)
+        ).scalars().all()
+        by_problem: dict[int, list[ExamTestCase]] = {}
+        for tc in test_cases:
+            by_problem.setdefault(tc.problem_id, []).append(tc)
+
+        # Lấy tên exam để hiển thị trong UI
+        exams_map = {e.id: e.title for e in session.execute(
+            select(Exam.id, Exam.title).where(Exam.id.in_(exam_ids))
+        ).all()}
+
+        result = []
+        for p in problems:
+            d = _problem_to_dict(p, by_problem.get(p.id, []))
+            # Reset id → None để tránh ghi đè câu gốc khi thêm vào đề mới
+            d["id"] = None
+            for tc in d["test_cases"]:
+                tc["id"] = None
+            d["_source_exam_title"] = exams_map.get(p.exam_id, "")
+            d["_source_problem_id"] = p.id   # dùng để tránh trùng trong 1 lần dùng
+            result.append(d)
+        return result
+
+
+
 def get_exam(exam_id: int, teacher_id: int) -> Exam | None:
     with get_session() as session:
         return session.execute(

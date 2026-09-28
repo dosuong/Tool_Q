@@ -516,10 +516,61 @@ def page_create_exam(teacher_id: int):
         _render_one_problem(_i)
 
     if can_add_remove:
-        if st.button("Thêm câu", icon=":material/add:", key="oe_add_problem_btn"):
+        btn_col, bank_col = st.columns([1, 3])
+        if btn_col.button("Thêm câu mới", icon=":material/add:", key="oe_add_problem_btn"):
             problems_draft.append(_new_problem())
             st.session_state["oe_editor_version"] += 1
             st.rerun()
+
+        # ---- Ngân hàng câu hỏi ----
+        with st.expander(":material/library_books: Thêm từ ngân hàng câu hỏi", expanded=False):
+            bank = service.list_problems_for_bank(teacher_id)
+            # Lọc bỏ các câu đã có trong đề hiện tại (so sánh theo _source_problem_id)
+            existing_src_ids = {p.get("_source_problem_id") for p in problems_draft if p.get("_source_problem_id")}
+            bank_available = [p for p in bank if p.get("_source_problem_id") not in existing_src_ids]
+
+            if not bank_available:
+                st.caption("Chưa có câu hỏi nào trong ngân hàng hoặc tất cả đã được thêm vào đề này.")
+            else:
+                # Thanh tìm kiếm
+                search_kw = st.text_input(
+                    "Tìm câu", placeholder="Gõ tên câu hoặc tên đề...",
+                    key="oe_bank_search", label_visibility="collapsed",
+                ).strip().lower()
+                filtered = [
+                    p for p in bank_available
+                    if not search_kw
+                    or search_kw in p.get("title", "").lower()
+                    or search_kw in p.get("_source_exam_title", "").lower()
+                ] if search_kw else bank_available
+
+                st.caption(f"Tìm thấy **{len(filtered)}** câu — bấm **Thêm** để sao chép vào đề (không ảnh hưởng câu gốc).")
+
+                for bank_p in filtered:
+                    src_title = bank_p.get("_source_exam_title", "")
+                    n_tc = len(bank_p.get("test_cases", []))
+                    desc_preview = (bank_p.get("description") or "")[:80]
+                    if len(bank_p.get("description") or "") > 80:
+                        desc_preview += "..."
+
+                    b_col1, b_col2 = st.columns([5, 1])
+                    with b_col1:
+                        st.markdown(
+                            f"**{bank_p['title']}** &nbsp;<small style='color:#6B7280;'>từ đề: *{src_title}* · {n_tc} test case · {bank_p['max_score']:.0f} điểm</small>"
+                            + (f"<br><small style='color:#9CA3AF;'>{desc_preview}</small>" if desc_preview else ""),
+                            unsafe_allow_html=True,
+                        )
+                    with b_col2:
+                        if st.button("Thêm", key=f"oe_bank_add_{bank_p['_source_problem_id']}", use_container_width=True):
+                            import copy
+                            new_p = copy.deepcopy(bank_p)
+                            # Xoá metadata ngân hàng, giữ id=None để INSERT mới
+                            new_p.pop("_source_exam_title", None)
+                            # Giữ _source_problem_id để biết câu này đã được dùng (tránh thêm 2 lần)
+                            problems_draft.append(new_p)
+                            st.session_state["oe_editor_version"] += 1
+                            st.rerun()
+                    st.divider()
 
     st.divider()
     if st.session_state.get("_oe_saved_msg"):

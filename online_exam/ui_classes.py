@@ -19,6 +19,26 @@ def _confirm_delete_class(class_id: int, teacher_id: int, name: str):
         st.rerun()
 
 
+@st.fragment
+def _render_class_card(room, teacher_id: int):
+    with st.container(border=True):
+        col_info, col_actions = st.columns([3, 1])
+        with col_info:
+            status = "🟢 Đang mở" if room.is_active else "🔴 Đã khoá"
+            st.markdown(f"**{room.name}** — {status}")
+            st.caption("Học sinh vào bằng tài khoản (username/password) đã cấp ở mục 'Quản lý học sinh' bên dưới.")
+        with col_actions:
+            new_active = st.toggle("Mở lớp", value=room.is_active, key=f"toggle_active_{room.id}")
+            if new_active != room.is_active:
+                service.set_class_active(room.id, teacher_id, new_active)
+                st.rerun(scope="fragment")
+            if st.button("Xoá lớp", icon=":material/delete:", key=f"delete_class_{room.id}", use_container_width=True):
+                _confirm_delete_class(room.id, teacher_id, room.name)
+
+        with st.expander("Quản lý học sinh", icon=":material/group:"):
+            render_student_management(room.id, teacher_id)
+
+
 def page_manage_classes(teacher_id: int):
     st.subheader("Quản lý lớp", icon=":material/groups:", divider="gray")
 
@@ -44,19 +64,4 @@ def page_manage_classes(teacher_id: int):
         return
 
     for room in classes:
-        with st.container(border=True):
-            col_info, col_actions = st.columns([3, 1])
-            with col_info:
-                status = "🟢 Đang mở" if room.is_active else "🔴 Đã khoá"
-                st.markdown(f"**{room.name}** — {status}")
-                st.caption("Học sinh vào bằng tài khoản (username/password) đã cấp ở mục 'Quản lý học sinh' bên dưới.")
-            with col_actions:
-                new_active = st.toggle("Mở lớp", value=room.is_active, key=f"toggle_active_{room.id}")
-                if new_active != room.is_active:
-                    service.set_class_active(room.id, teacher_id, new_active)
-                    st.rerun()
-                if st.button("Xoá lớp", icon=":material/delete:", key=f"delete_class_{room.id}", use_container_width=True):
-                    _confirm_delete_class(room.id, teacher_id, room.name)
-
-            with st.expander("Quản lý học sinh", icon=":material/group:"):
-                render_student_management(room.id, teacher_id)
+        _render_class_card(room, teacher_id)

@@ -476,7 +476,7 @@ def _build_sample_test_cases_preview_html(sample_tcs: list[dict]) -> str:
 .sample-tc-table tr:nth-child(even) { background-color: #f8fafc; }
 .code-font { font-family: monospace; white-space: pre-wrap; }
 </style>
-<div style="font-weight: 700; margin-top: 10px; margin-bottom: 4px; color: #1e293b;">📌 Test case mẫu:</div>
+<div style="font-weight: 700; margin-top: 10px; margin-bottom: 6px; color: #1e293b; display: flex; align-items: center; gap: 6px;"><span class="material-symbols-rounded" style="font-size: 20px; color: #2563EB;">fact_check</span> Test case mẫu</div>
 <table class="sample-tc-table">
 <thead>
 <tr>

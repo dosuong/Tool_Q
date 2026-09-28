@@ -252,10 +252,30 @@ def page_create_exam(teacher_id: int):
 
             pc1, pc2, pc3 = st.columns(3)
             p_title = pc1.text_input(ui_style.required_label("Tên câu"), value=problem.get("title", ""), key=f"oe_p_title_{pkey}")
-            p_description = st.text_area(
-                "Mô tả / đề bài cho câu này (học sinh sẽ thấy khi mở đúng câu này)",
-                value=problem.get("description", ""), height=120, key=f"oe_p_desc_{pkey}",
+            st.markdown(
+                "<small style='color:#6B7280;'>**Mô tả / Đề bài** — hỗ trợ Markdown: "
+                "`**đậm**`&nbsp; `*nghiêng*`&nbsp; `` `code` ``&nbsp; `- danh sách`&nbsp; `# tiêu đề` "
+                "— Cột phải là bản xem trước.</small>",
+                unsafe_allow_html=True,
             )
+            col_desc_input, col_desc_preview = st.columns([1, 1], gap="medium")
+            with col_desc_input:
+                p_description = st.text_area(
+                    "Nhập Markdown ở đây",
+                    value=problem.get("description", ""), height=180, key=f"oe_p_desc_{pkey}",
+                    label_visibility="collapsed",
+                    placeholder="VD:\n**Yêu cầu:** Viết chương trình...\n*Dữ liệu vào:* Nhập N từ bàn phím\n*Kết quả ra:* In YES hoặc NO",
+                )
+            with col_desc_preview:
+                st.markdown(
+                    "<div style='border:1px solid #E2E8F0;border-radius:8px;padding:10px 14px;"
+                    "min-height:180px;background:#FAFAFA;font-size:0.97rem;'>"
+                    + (p_description.replace("\r\n", "\n").replace("\n", "  \n") if p_description.strip()
+                       else "<span style='color:#9CA3AF;font-style:italic;'>Xem trước hiển thị ở đây...</span>")
+                    + "</div>",
+                    unsafe_allow_html=True,
+                )
+
             p_max_score = pc2.number_input(
                 "Điểm tối đa", min_value=0.0, value=float(problem.get("max_score", 10)), key=f"oe_p_maxscore_{pkey}",
             )

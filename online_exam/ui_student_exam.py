@@ -296,7 +296,8 @@ def _render_problem_tab(index: int, total_problems: int, exam, enrollment, probl
     st.markdown(f"#### {header}")
     if problem.get("description"):
         desc = problem["description"].replace("\r\n", "\n").replace("\n", "  \n")
-        st.markdown(desc)
+        st.markdown(desc, unsafe_allow_html=True)
+
     st.divider()
 
     sample_tcs = [tc for tc in problem["test_cases"] if tc.get("is_sample")]

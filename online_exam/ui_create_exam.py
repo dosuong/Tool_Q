@@ -16,7 +16,9 @@ import streamlit as st
 from grader.ast_checker import check_structure
 from grader.models import TestCase
 from grader.runner import grade_one, run_capture_only, run_function_capture_only
+from grader.templates_store import save_template as _save_template_to_store
 from online_exam import service, ui_style
+
 
 CONSTRUCT_OPTIONS = ["For", "While", "ListComp", "Recursion"]
 _POLICY_OPTIONS = ["best", "average"]
@@ -516,61 +518,10 @@ def page_create_exam(teacher_id: int):
         _render_one_problem(_i)
 
     if can_add_remove:
-        btn_col, bank_col = st.columns([1, 3])
-        if btn_col.button("Thêm câu mới", icon=":material/add:", key="oe_add_problem_btn"):
+        if st.button("Thêm câu", icon=":material/add:", key="oe_add_problem_btn"):
             problems_draft.append(_new_problem())
             st.session_state["oe_editor_version"] += 1
             st.rerun()
-
-        # ---- Ngân hàng câu hỏi ----
-        with st.expander(":material/library_books: Thêm từ ngân hàng câu hỏi", expanded=False):
-            bank = service.list_problems_for_bank(teacher_id)
-            # Lọc bỏ các câu đã có trong đề hiện tại (so sánh theo _source_problem_id)
-            existing_src_ids = {p.get("_source_problem_id") for p in problems_draft if p.get("_source_problem_id")}
-            bank_available = [p for p in bank if p.get("_source_problem_id") not in existing_src_ids]
-
-            if not bank_available:
-                st.caption("Chưa có câu hỏi nào trong ngân hàng hoặc tất cả đã được thêm vào đề này.")
-            else:
-                # Thanh tìm kiếm
-                search_kw = st.text_input(
-                    "Tìm câu", placeholder="Gõ tên câu hoặc tên đề...",
-                    key="oe_bank_search", label_visibility="collapsed",
-                ).strip().lower()
-                filtered = [
-                    p for p in bank_available
-                    if not search_kw
-                    or search_kw in p.get("title", "").lower()
-                    or search_kw in p.get("_source_exam_title", "").lower()
-                ] if search_kw else bank_available
-
-                st.caption(f"Tìm thấy **{len(filtered)}** câu — bấm **Thêm** để sao chép vào đề (không ảnh hưởng câu gốc).")
-
-                for bank_p in filtered:
-                    src_title = bank_p.get("_source_exam_title", "")
-                    n_tc = len(bank_p.get("test_cases", []))
-                    desc_preview = (bank_p.get("description") or "")[:80]
-                    if len(bank_p.get("description") or "") > 80:
-                        desc_preview += "..."
-
-                    b_col1, b_col2 = st.columns([5, 1])
-                    with b_col1:
-                        st.markdown(
-                            f"**{bank_p['title']}** &nbsp;<small style='color:#6B7280;'>từ đề: *{src_title}* · {n_tc} test case · {bank_p['max_score']:.0f} điểm</small>"
-                            + (f"<br><small style='color:#9CA3AF;'>{desc_preview}</small>" if desc_preview else ""),
-                            unsafe_allow_html=True,
-                        )
-                    with b_col2:
-                        if st.button("Thêm", key=f"oe_bank_add_{bank_p['_source_problem_id']}", use_container_width=True):
-                            import copy
-                            new_p = copy.deepcopy(bank_p)
-                            # Xoá metadata ngân hàng, giữ id=None để INSERT mới
-                            new_p.pop("_source_exam_title", None)
-                            # Giữ _source_problem_id để biết câu này đã được dùng (tránh thêm 2 lần)
-                            problems_draft.append(new_p)
-                            st.session_state["oe_editor_version"] += 1
-                            st.rerun()
-                    st.divider()
 
     st.divider()
     if st.session_state.get("_oe_saved_msg"):
@@ -615,11 +566,48 @@ def page_create_exam(teacher_id: int):
                 "final_score_policy": st.session_state.get(f"{mkey}_policy", "best"),
             }
             new_exam_id = service.save_exam(teacher_id, class_id, exam_meta, problems_draft, exam_id)
+
+            # ── Tự động đồng bộ mỗi câu sang Quản lý khung mẫu (templates_store) ──
+            # Câu nào có tên → tạo / cập nhật 1 khung mẫu tương ứng để dùng ở trang
+            # Chấm 1 đề / Chấm cả kỳ thi mà không cần tạo thủ công lại.
+            synced = []
+            for p in problems_draft:
+                pname = (p.get("title") or "").strip()
+                if not pname:
+                    continue
+                # Chuyển test_cases về định dạng tương thích với templates_store
+                tcs = []
+                for tc in p.get("test_cases", []):
+                    tcs.append({
+                        "input": tc.get("input") or "",
+                        "expected_output": tc.get("expected_output") or "",
+                        "call_args": tc.get("call_args"),
+                        "call_kwargs": tc.get("call_kwargs"),
+                        "expected_return": tc.get("expected_return"),
+                        "timeout": float(tc.get("timeout") or 5),
+                        "note": tc.get("note") or "",
+                    })
+                template_data = {
+                    "name": pname,
+                    "description": p.get("description") or "",
+                    "function_name": p.get("function_name") or None,
+                    "structural_rules": {
+                        "required_constructs": p.get("required_constructs") or [],
+                        "forbidden_constructs": p.get("forbidden_constructs") or [],
+                        "forbidden_imports": p.get("forbidden_imports") or [],
+                        "forbidden_calls": p.get("forbidden_calls") or [],
+                    },
+                    "test_cases": tcs,
+                }
+                _save_template_to_store(pname, template_data, teacher_id)
+                synced.append(pname)
+
             st.session_state.pop(state_key, None)
             # Dọn luôn các khoá widget của khối cấu hình: nếu vừa tạo bài MỚI, namespace
             # "..._new" còn sót giá trị cũ sẽ tự điền vào lần tạo bài mới kế tiếp.
             for k in [k for k in st.session_state if k.startswith(f"{mkey}_")]:
                 st.session_state.pop(k, None)
             st.session_state["oe_pending_exam_choice"] = new_exam_id
-            st.session_state["_oe_saved_msg"] = "Đã lưu bài kiểm tra (chưa công bố cho học sinh)."
+            sync_msg = f" · Đã đồng bộ sang Khung mẫu: {', '.join(synced)}." if synced else ""
+            st.session_state["_oe_saved_msg"] = f"Đã lưu bài kiểm tra (chưa công bố cho học sinh).{sync_msg}"
             st.rerun()

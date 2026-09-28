@@ -267,14 +267,12 @@ def page_create_exam(teacher_id: int):
                     placeholder="VD:\n**Yêu cầu:** Viết chương trình...\n*Dữ liệu vào:* Nhập N từ bàn phím\n*Kết quả ra:* In YES hoặc NO",
                 )
             with col_desc_preview:
-                st.markdown(
-                    "<div style='border:1px solid #E2E8F0;border-radius:8px;padding:10px 14px;"
-                    "min-height:180px;background:#FAFAFA;font-size:0.97rem;'>"
-                    + (p_description.replace("\r\n", "\n").replace("\n", "  \n") if p_description.strip()
-                       else "<span style='color:#9CA3AF;font-style:italic;'>Xem trước hiển thị ở đây...</span>")
-                    + "</div>",
-                    unsafe_allow_html=True,
-                )
+                with st.container(border=True, height=183):
+                    if p_description.strip():
+                        st.markdown(p_description.replace("\r\n", "\n").replace("\n", "  \n"))
+                    else:
+                        st.caption("_Xem trước hiển thị ở đây..._")
+
 
             p_max_score = pc2.number_input(
                 "Điểm tối đa", min_value=0.0, value=float(problem.get("max_score", 10)), key=f"oe_p_maxscore_{pkey}",

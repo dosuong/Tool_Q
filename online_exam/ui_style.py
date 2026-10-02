@@ -46,6 +46,88 @@ def _inject_tab_hack():
                 }
             }
         }, { passive: true });
+
+        // ── Formatting toolbar support ──
+        (function() {
+            var PLACEHOLDER_HINT = 'VD:';
+            var _lastFocusedDescTA = null;
+            
+            // Track last-focused description textarea
+            doc.addEventListener('focusin', function(e) {
+                if (e.target && e.target.tagName && e.target.tagName.toLowerCase() === 'textarea'
+                    && e.target.placeholder && e.target.placeholder.startsWith(PLACEHOLDER_HINT)) {
+                    _lastFocusedDescTA = e.target;
+                }
+            }, { passive: true });
+            
+            function applyFmt(before, after) {
+                var ta = _lastFocusedDescTA;
+                if (!ta || !ta.isConnected) {
+                    // Fallback: find first matching textarea
+                    var tas = doc.querySelectorAll('textarea');
+                    for (var i = 0; i < tas.length; i++) {
+                        if (tas[i].placeholder && tas[i].placeholder.startsWith(PLACEHOLDER_HINT)) {
+                            ta = tas[i];
+                            break;
+                        }
+                    }
+                }
+                if (!ta) return;
+                var s = ta.selectionStart, e = ta.selectionEnd;
+                var selected = ta.value.substring(s, e);
+                var newVal = ta.value.substring(0, s) + before + selected + after + ta.value.substring(e);
+                var nativeInputSetter = Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, 'value').set;
+                nativeInputSetter.call(ta, newVal);
+                ta.selectionStart = s + before.length;
+                ta.selectionEnd = s + before.length + selected.length;
+                ta.dispatchEvent(new Event('input', { bubbles: true }));
+                ta.focus();
+            }
+            window.applyFmt = applyFmt;
+            
+            // Keyboard shortcuts for description textareas
+            doc.addEventListener('keydown', function(ev) {
+                if (!ev.ctrlKey && !ev.metaKey) return;
+                var ta = ev.target;
+                if (!ta || ta.tagName.toLowerCase() !== 'textarea') return;
+                if (!ta.placeholder || !ta.placeholder.startsWith(PLACEHOLDER_HINT)) return;
+                var k = ev.key.toLowerCase();
+                if (k === 'b') { ev.preventDefault(); applyFmt('**', '**'); }
+                else if (k === 'i') { ev.preventDefault(); applyFmt('*', '*'); }
+                else if (k === 'u') { ev.preventDefault(); applyFmt('<u>', '</u>'); }
+                else if (k === 'e') { ev.preventDefault(); applyFmt('<center>', '</center>'); }
+            }, false);
+            
+            // Event delegation for toolbar buttons (clicked from st.markdown)
+            // Uses CSS classes instead of data-* attributes because Streamlit's
+            // unsafe_allow_html strips custom data-* attributes via Bleach.
+            var fmtMap = {
+                'fmt-btn-bold': ['**', '**'],
+                'fmt-btn-italic': ['*', '*'],
+                'fmt-btn-underline': ['<u>', '</u>'],
+                'fmt-btn-center': ['<center>', '</center>'],
+                'fmt-btn-list': ['\n- ', '\n'],
+                'fmt-btn-code': ['`', '`']
+            };
+            doc.addEventListener('click', function(ev) {
+                var btn = ev.target.closest('.fmt-btn');
+                if (!btn) return;
+                // Check data-* attributes first (for components.html usage)
+                if (btn.dataset.before !== undefined) {
+                    ev.preventDefault();
+                    applyFmt(btn.dataset.before, btn.dataset.after || '');
+                    return;
+                }
+                // Fallback to class-based mapping (for st.markdown usage)
+                for (var cls in fmtMap) {
+                    if (btn.classList.contains(cls)) {
+                        ev.preventDefault();
+                        applyFmt(fmtMap[cls][0], fmtMap[cls][1]);
+                        return;
+                    }
+                }
+            }, false);
+        })();
         </script>
         """,
         height=0,
@@ -450,6 +532,18 @@ def inject_global_css():
                 visibility: hidden !important;
                 height: 0 !important;
             }
+
+            /* ====== FORMATTING TOOLBAR ====== */
+            .fmt-bar { display:flex; gap:5px; align-items:center; padding:4px 0; flex-wrap:wrap; margin-bottom: 5px; }
+            .fmt-btn {
+                background:#f1f5f9; border:1px solid #cbd5e1; border-radius:6px;
+                padding:3px 10px; cursor:pointer; font-size:14px; line-height:1.6;
+                font-family:sans-serif; transition:background .15s;
+                min-width:30px; text-align:center; color: #334155;
+            }
+            .fmt-btn:hover { background:#dbeafe; border-color:#3b82f6; color:#1d4ed8; }
+            .fmt-divider { color:#d1d5db; font-size:18px; margin:0 2px; }
+            .fmt-hint { color:#9ca3af; font-size:11px; margin-left:4px; }
         </style>
         """,
         unsafe_allow_html=True,

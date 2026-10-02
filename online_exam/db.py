@@ -36,9 +36,13 @@ def get_engine():
     return engine
 
 
+@st.cache_resource(show_spinner=False)
+def _get_session_factory():
+    return sessionmaker(bind=get_engine(), expire_on_commit=False)
+
+
 def get_session() -> Session:
-    session_factory = sessionmaker(bind=get_engine(), expire_on_commit=False)
-    return session_factory()
+    return _get_session_factory()()
 
 
 def using_dev_sqlite() -> bool:

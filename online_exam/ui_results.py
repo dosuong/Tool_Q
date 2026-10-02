@@ -123,36 +123,58 @@ def page_exam_results(teacher_id: int):
     df = pd.DataFrame(table_rows)
     st.dataframe(df, use_container_width=True, hide_index=True)
 
-    c1, c2, c3 = st.columns(3)
-    
-    # 1. Bảng điểm tổng quát (Excel)
-    buf_summary = io.BytesIO()
-    with pd.ExcelWriter(buf_summary, engine="openpyxl") as writer:
-        df.to_excel(writer, index=False, sheet_name="TongHop")
-    c1.download_button(
-        "Tải kết quả tổng quát (Excel)", data=buf_summary.getvalue(), file_name="bang_diem_tong_quat.xlsx",
-        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-        icon=":material/download:", use_container_width=True,
-    )
-    
-    # 2. Chi tiết lỗi (Excel)
-    excel_bytes = _build_detailed_excel_bytes(rows)
-    c2.download_button(
-        "Tải kết quả chi tiết lỗi (Excel)", data=excel_bytes, file_name="chi_tiet_loi_tung_cau.xlsx",
-        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-        icon=":material/bug_report:", use_container_width=True,
-    )
-    
-    # 3. ZIP bài làm
-    zip_bytes = _build_results_zip(rows)
-    if zip_bytes:
-        c3.download_button(
-            "Tải bài làm (ZIP)", data=zip_bytes, file_name="bai_lam_hoc_sinh.zip",
-            mime="application/zip", icon=":material/folder_zip:", use_container_width=True,
+    @st.fragment
+    def render_download_section():
+        c1, c2, c3 = st.columns(3)
+        
+        # 1. Bảng điểm tổng quát (Excel)
+        buf_summary = io.BytesIO()
+        with pd.ExcelWriter(buf_summary, engine="openpyxl") as writer:
+            df.to_excel(writer, index=False, sheet_name="TongHop")
+        c1.download_button(
+            "Tải kết quả tổng quát (Excel)", data=buf_summary.getvalue(), file_name="bang_diem_tong_quat.xlsx",
+            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            icon=":material/download:", use_container_width=True,
         )
+        
+        # Use session_state to track computation per exam to support lazy evaluation
+        state_key_excel = f"dl_excel_{exam_id}"
+        state_key_zip = f"dl_zip_{exam_id}"
+        
+        # 2. Chi tiết lỗi (Excel)
+        if state_key_excel not in st.session_state:
+            if c2.button("Tạo file chi tiết lỗi (Excel)", icon=":material/build:", use_container_width=True, key=f"btn_excel_{exam_id}"):
+                with st.spinner("Đang tính toán dữ liệu..."):
+                    st.session_state[state_key_excel] = _build_detailed_excel_bytes(rows)
+                st.rerun()
+        else:
+            c2.download_button(
+                "Tải kết quả chi tiết lỗi (Excel)", data=st.session_state[state_key_excel], file_name="chi_tiet_loi_tung_cau.xlsx",
+                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                icon=":material/bug_report:", use_container_width=True, key=f"dl_excel_{exam_id}_btn"
+            )
+            
+        # 3. ZIP bài làm
+        if state_key_zip not in st.session_state:
+            if c3.button("Tạo file ZIP bài làm", icon=":material/build:", use_container_width=True, key=f"btn_zip_{exam_id}"):
+                with st.spinner("Đang gom file ZIP..."):
+                    st.session_state[state_key_zip] = _build_results_zip(rows)
+                st.rerun()
+        else:
+            if st.session_state[state_key_zip]:
+                c3.download_button(
+                    "Tải bài làm (ZIP)", data=st.session_state[state_key_zip], file_name="bai_lam_hoc_sinh.zip",
+                    mime="application/zip", icon=":material/folder_zip:", use_container_width=True, key=f"dl_zip_{exam_id}_btn"
+                )
+            else:
+                c3.button("Không có bài làm", disabled=True, use_container_width=True, key=f"no_zip_{exam_id}")
+
+    render_download_section()
 
     st.subheader("Chi tiết theo học sinh", icon=":material/person_search:", divider="gray")
-    for r in rows:
+    
+    @st.fragment
+    def render_student_detail(r):
         header = f"{r['student_name']} ({r['student_code']}) — Tổng: {r['total_score']:.2f}"
         with st.expander(header, icon=":material/person:"):
             for pp in r["per_problem"]:
@@ -173,9 +195,7 @@ def page_exam_results(teacher_id: int):
                     for s in submissions
                 }
                 sub_ids = list(sub_options.keys())
-                # Mặc định mở đúng lần được tính điểm (⭐) thay vì luôn là lần 1 — trước đây
-                # selectbox không có index= nên luôn mặc định phần tử đầu tiên (lần nộp cũ
-                # nhất), khiến GV tưởng nhầm là "nộp lại không cập nhật" dù dữ liệu đã đúng.
+                # Mặc định mở đúng lần được tính điểm (⭐) thay vì luôn là lần 1
                 default_id = pp["best_submission_id"] if pp["best_submission_id"] in sub_ids else sub_ids[-1]
                 sel_key = f"oer_sub_sel_{r['enrollment_id']}_{pp['problem_id']}"
                 chosen_id = st.selectbox(
@@ -190,3 +210,6 @@ def page_exam_results(teacher_id: int):
                     mime="text/x-python", key=f"oer_dl_{chosen.id}",
                 )
                 st.divider()
+
+    for r in rows:
+        render_student_detail(r)

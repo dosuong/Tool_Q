@@ -45,6 +45,7 @@ def _clear_read_caches():
     for cached_fn in (
         list_classes, list_exams, load_exam_full, load_exam_problems_for_student,
         list_students, is_exam_locked_for_editing, get_class_by_id, get_exam_results_table,
+        list_official_submissions, get_submission_with_results,
     ):
         cached_fn.clear()
 
@@ -1106,6 +1107,7 @@ def get_exam_results_table(exam_id: int, teacher_id: int) -> dict | None:
     }
 
 
+@st.cache_data(ttl=_READ_CACHE_TTL, show_spinner=False)
 def list_official_submissions(enrollment_id: int, problem_id: int) -> list[Submission]:
     """Chỉ trả các lần NỘP CHÍNH THỨC (is_trial=False) — theo quyết định đã chốt, GV KHÔNG
     xem được nháp/chạy thử real-time của HS, chỉ xem các lần đã bấm 'Nộp câu này'."""

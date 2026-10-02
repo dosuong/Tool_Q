@@ -257,69 +257,20 @@ def page_create_exam(teacher_id: int):
 
             # Label + thanh công cụ định dạng
             st.markdown("<small style='color:#6B7280;'><b>Mô tả / Đề bài</b> — Chọn chữ rồi bấm nút hoặc dùng phím tắt. Cột phải là xem trước.</small>", unsafe_allow_html=True)
-            # Toolbar HTML + JS phím tắt (scope theo placeholder để không ảnh hưởng textarea khác)
-            st.components.v1.html(f"""
-<style>
-.fmt-bar {{ display:flex; gap:5px; align-items:center; padding:4px 0; flex-wrap:wrap; }}
-.fmt-btn {{
-    background:#f1f5f9; border:1px solid #cbd5e1; border-radius:6px;
-    padding:3px 10px; cursor:pointer; font-size:14px; line-height:1.6;
-    font-family:sans-serif; transition:background .15s;
-    min-width:30px; text-align:center;
-}}
-.fmt-btn:hover {{ background:#dbeafe; border-color:#3b82f6; color:#1d4ed8; }}
-.fmt-divider {{ color:#d1d5db; font-size:18px; margin:0 2px; }}
-.fmt-hint {{ color:#9ca3af; font-size:11px; margin-left:4px; }}
-</style>
+            # Toolbar HTML (JS và CSS đã được đưa vào ui_style.py để dùng chung, tránh iframe cho mỗi câu)
+            st.markdown("""
 <div class="fmt-bar">
-    <button class="fmt-btn" onclick="applyFmt('**','**')" title="Đậm — Ctrl+B"><b>B</b></button>
-    <button class="fmt-btn" onclick="applyFmt('*','*')"  title="Nghiêng — Ctrl+I"><i>I</i></button>
-    <button class="fmt-btn" onclick="applyFmt('<u>','</u>')" title="Gạch chân — Ctrl+U"><u>U</u></button>
+    <button class="fmt-btn fmt-btn-bold" title="Đậm — Ctrl+B"><b>B</b></button>
+    <button class="fmt-btn fmt-btn-italic" title="Nghiêng — Ctrl+I"><i>I</i></button>
+    <button class="fmt-btn fmt-btn-underline" title="Gạch chân — Ctrl+U"><u>U</u></button>
     <span class="fmt-divider">|</span>
-    <button class="fmt-btn" onclick="applyFmt('<center>','</center>')" title="Căn giữa — Ctrl+E" style="font-size:16px;">&#8801;</button>
-    <button class="fmt-btn" onclick="applyFmt('\\n- ','\\n')" title="Danh sách">&#8226; List</button>
-    <button class="fmt-btn" onclick="applyFmt('`','`')" title="Code inline">&#96;code&#96;</button>
+    <button class="fmt-btn fmt-btn-center" title="Căn giữa — Ctrl+E" style="font-size:16px;">&#8801;</button>
+    <button class="fmt-btn fmt-btn-list" title="Danh sách">&#8226; List</button>
+    <button class="fmt-btn fmt-btn-code" title="Code inline">&#96;code&#96;</button>
     <span class="fmt-divider">|</span>
     <span class="fmt-hint">Ctrl+B &nbsp;Ctrl+I &nbsp;Ctrl+U &nbsp;Ctrl+E (căn giữa)</span>
 </div>
-<script>
-(function() {{
-    var PLACEHOLDER_HINT = 'VD:';
-    function getDescTA() {{
-        var tas = window.parent.document.querySelectorAll('textarea');
-        for (var i = 0; i < tas.length; i++) {{
-            if (tas[i].placeholder && tas[i].placeholder.startsWith(PLACEHOLDER_HINT)) return tas[i];
-        }}
-        return null;
-    }}
-    function applyFmt(before, after) {{
-        var ta = getDescTA();
-        if (!ta) {{ return; }}
-        var s = ta.selectionStart, e = ta.selectionEnd;
-        var selected = ta.value.substring(s, e);
-        var newVal = ta.value.substring(0, s) + before + selected + after + ta.value.substring(e);
-        var nativeInputSetter = Object.getOwnPropertyDescriptor(window.parent.HTMLTextAreaElement.prototype, 'value').set;
-        nativeInputSetter.call(ta, newVal);
-        ta.selectionStart = s + before.length;
-        ta.selectionEnd   = s + before.length + selected.length;
-        ta.dispatchEvent(new Event('input', {{bubbles: true}}));
-        ta.focus();
-    }}
-    window.applyFmt = applyFmt;
-    window.parent.document.addEventListener('keydown', function(ev) {{
-        if (!ev.ctrlKey && !ev.metaKey) return;
-        var ta = ev.target;
-        if (!ta || ta.tagName.toLowerCase() !== 'textarea') return;
-        if (!ta.placeholder || !ta.placeholder.startsWith(PLACEHOLDER_HINT)) return;
-        var k = ev.key.toLowerCase();
-        if (k === 'b') {{ ev.preventDefault(); applyFmt('**','**'); }}
-        else if (k === 'i') {{ ev.preventDefault(); applyFmt('*','*'); }}
-        else if (k === 'u') {{ ev.preventDefault(); applyFmt('<u>','</u>'); }}
-        else if (k === 'e') {{ ev.preventDefault(); applyFmt('<center>','</center>'); }}
-    }}, false);
-}})();
-</script>
-""", height=42, scrolling=False)
+""", unsafe_allow_html=True)
 
             col_desc_input, col_desc_preview = st.columns([1, 1], gap="medium")
             with col_desc_input:

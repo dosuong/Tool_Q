@@ -416,14 +416,17 @@ def save_exam(teacher_id: int, class_id: int, exam_meta: dict, problems: list[di
 
         locked = False
         if exam_id is not None:
-            has_submission = session.execute(
-                select(Submission.id)
-                .join(ProblemProgress, Submission.problem_progress_id == ProblemProgress.id)
-                .join(ExamProblem, ProblemProgress.problem_id == ExamProblem.id)
-                .where(ExamProblem.exam_id == exam_id, Submission.is_trial.is_(False))
-                .limit(1)
-            ).scalar_one_or_none() is not None
-            locked = has_submission and not exam.force_unlocked
+            if exam.force_unlocked:
+                locked = False
+            else:
+                has_submission = session.execute(
+                    select(Submission.id)
+                    .join(ProblemProgress, Submission.problem_progress_id == ProblemProgress.id)
+                    .join(ExamProblem, ProblemProgress.problem_id == ExamProblem.id)
+                    .where(ExamProblem.exam_id == exam_id, Submission.is_trial.is_(False))
+                    .limit(1)
+                ).scalar_one_or_none() is not None
+                locked = has_submission
 
         if not locked:
             if exam_id is not None:
@@ -1124,3 +1127,60 @@ def list_official_submissions(enrollment_id: int, problem_id: int) -> list[Submi
                 Submission.problem_progress_id == progress.id, Submission.is_trial.is_(False),
             ).order_by(Submission.attempt_number)
         ).scalars().all())
+
+def bulk_create_students(teacher_id: int, class_id: int, students_data: list[dict]) -> list[dict]:
+    """Bulk create students with parallel bcrypt hashing and a single DB transaction to minimize latency."""
+    room = get_class(class_id, teacher_id)
+    if room is None:
+        raise ValueError("Không tìm thấy lớp hoặc không có quyền.")
+        
+    import concurrent.futures
+    for d in students_data:
+        d["raw_password"] = student_auth.generate_password()
+        
+    def _hash(pwd):
+        return auth.hash_password(pwd)
+        
+    with concurrent.futures.ThreadPoolExecutor() as executor:
+        hashes = list(executor.map(_hash, [d["raw_password"] for d in students_data]))
+        
+    for d, h in zip(students_data, hashes):
+        d["password_hash"] = h
+        
+    results = []
+    with get_session() as session:
+        custom_usernames = [d["custom_username"] for d in students_data if d.get("custom_username")]
+        existing = set()
+        if custom_usernames:
+            existing_rows = session.execute(
+                select(Student.username).where(Student.username.in_(custom_usernames))
+            ).scalars().all()
+            existing = set(existing_rows)
+            
+        import random, string
+        for data in students_data:
+            custom_user = data.get("custom_username")
+            if custom_user:
+                if custom_user in existing:
+                    suffix = "".join(random.choices(string.ascii_lowercase + string.digits, k=3))
+                    username = f"{custom_user}{suffix}"
+                    existing.add(username)
+                else:
+                    username = custom_user
+                    existing.add(username)
+            else:
+                username = student_auth.generate_username(session)
+                
+            student = Student(
+                class_id=class_id, username=username,
+                password_hash=data["password_hash"], full_name=data["full_name"].strip(),
+            )
+            session.add(student)
+            results.append({"student": student, "raw_password": data["raw_password"]})
+            
+        session.commit()
+        for r in results:
+            session.refresh(r["student"])
+            
+    _clear_read_caches()
+    return results

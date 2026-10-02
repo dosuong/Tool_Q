@@ -74,7 +74,9 @@ def _render_bulk_import(class_id: int, teacher_id: int):
                     )
                 else:
                     import unicodedata
-                    rows_out = []
+                    
+                    students_to_create = []
+                    valid_rows_idx = []
                     for idx, row in df_in.iterrows():
                         ho = str(row[ho_col]).strip()
                         ten = str(row[ten_col]).strip()
@@ -104,12 +106,21 @@ def _render_bulk_import(class_id: int, teacher_id: int):
                         
                         custom_user = f"{stt_val}{ten_no_accent}{dob_str}"
                         
-                        student, raw_password = service.create_student(teacher_id, class_id, full_name, custom_username=custom_user)
-                        
-                        rows_out.append({
-                            "STT": stt_val, "Họ Tên HS": full_name,
-                            "Tài khoản": student.username, "Mật khẩu": raw_password,
+                        students_to_create.append({
+                            "full_name": full_name,
+                            "custom_username": custom_user
                         })
+                        valid_rows_idx.append(stt_val)
+                        
+                    if students_to_create:
+                        with st.spinner("Đang tạo tài khoản (có thể mất vài giây nếu số lượng lớn)..."):
+                            bulk_results = service.bulk_create_students(teacher_id, class_id, students_to_create)
+                        
+                        for stt_val, res in zip(valid_rows_idx, bulk_results):
+                            rows_out.append({
+                                "STT": stt_val, "Họ Tên HS": res["student"].full_name,
+                                "Tài khoản": res["student"].username, "Mật khẩu": res["raw_password"],
+                            })
                     if not rows_out:
                         st.warning("Không có dòng hợp lệ nào trong file (cột Tên trống hết).", icon=":material/warning:")
                     else:
